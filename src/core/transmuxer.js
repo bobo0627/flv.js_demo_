@@ -247,6 +247,9 @@ class Transmuxer {
             case 'logcat_callback':
                 Log.emitter.emit('log', data.type, data.logcat);
                 break;
+            case 'disconnect':
+                window.postMessage({action: 'disconnect'}, '*');
+                break;
             default:
                 break;
         }

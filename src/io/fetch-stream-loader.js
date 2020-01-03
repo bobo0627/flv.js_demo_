@@ -145,6 +145,7 @@ class FetchStreamLoader extends BaseLoader {
                 return this._pump.call(this, res.body.getReader());
             } else {
                 this._status = LoaderStatus.kError;
+                this.sendError();
                 if (this._onError) {
                     this._onError(LoaderErrors.HTTP_STATUS_CODE_INVALID, {code: res.status, msg: res.statusText});
                 } else {
@@ -163,6 +164,13 @@ class FetchStreamLoader extends BaseLoader {
 
     abort() {
         this._requestAbort = true;
+    }
+
+    sendError() {
+        this.abort();
+        self.postMessage({
+            msg: 'disconnect'
+        });
     }
 
     _pump(reader) {  // ReadableStreamReader
@@ -226,6 +234,8 @@ class FetchStreamLoader extends BaseLoader {
                 type = LoaderErrors.EXCEPTION;
                 info = {code: e.code, msg: e.message};
             }
+
+            this.sendError();
 
             if (this._onError) {
                 this._onError(type, info);
