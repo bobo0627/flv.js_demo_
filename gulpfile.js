@@ -59,7 +59,7 @@ function doBundle(b) {
         .pipe(buffer())
         .pipe(sourcemaps.init({loadMaps: true}))
         .pipe(sourcemaps.write('./'))
-        .pipe(gulp.dest('./dist/'));
+        .pipe(gulp.dest('./demo/flv-player/player/'));
 }
 
 function doLint(paths, exit) {
@@ -89,13 +89,13 @@ gulp.task('watch', ['clean'], function () {
             port: 8000,
             open: false
         });
-        require('opn')('http://localhost:8000/demo/index.html');
+        require('opn')('http://localhost:8000/demo/flv-player/demo.html');
     });
 });
 
 gulp.task('clean', function () {
     return del([
-        'dist/*'
+        './demo/flv-player/player/flv.*'
     ]);
 });
 
@@ -132,11 +132,11 @@ gulp.task('minimize', ['lint', 'build'], function () {
         }
     };
 
-    return gulp.src('dist/flv.js')
+    return gulp.src('./demo/flv-player/player/flv.js')
         .pipe(rename({extname: '.min.js'}))
         .pipe(sourcemaps.init({loadMaps: true}))
-            .pipe(uglify(options))
-            .on('error', console.error.bind(console))
+        .pipe(uglify(options))
+        .on('error', console.error.bind(console))
         .pipe(sourcemaps.write('./'))
-        .pipe(gulp.dest('./dist/'));
+        .pipe(gulp.dest('./demo/flv-player/player/'));
 });
