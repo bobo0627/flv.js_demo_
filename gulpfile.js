@@ -72,7 +72,7 @@ function doLint(paths, exit) {
 gulp.task('default', ['clean', 'lint', 'build']);
 gulp.task('release', ['clean', 'lint', 'build', 'minimize']);
 
-gulp.task('watch', ['clean'], function () {
+gulp.task('watch', ['clean', 'minimize'], function () {
     let gulpWatcher = gulp.watch(['gulpfile.js', 'src/**/*.js']);
 
     gulpWatcher.on('change', function (e) {
