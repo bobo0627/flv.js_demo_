@@ -1,5 +1,5 @@
 
-flv.js  [![npm](https://img.shields.io/npm/v/flv.js.svg?style=flat)](https://www.npmjs.com/package/flv.js)
+enhance-flvjs  [![npm](https://img.shields.io/npm/v/flv.js.svg?style=flat)](https://www.npmjs.com/package/flv.js)
 ======
 An HTML5 Flash Video (FLV) Player written in pure JavaScript without Flash. LONG LIVE FLV!
 
@@ -20,7 +20,7 @@ flv.js is written in [ECMAScript 6][], transpiled into ECMAScript 5 by [Babel Co
 [http://bilibili.github.io/flv.js/demo/](http://bilibili.github.io/flv.js/demo/)
 
 ## Features
-- FLV container with H.264 + AAC / MP3 codec playback
+- FLV container with H.264/H.265 + AAC / MP3 codec playback
 - Multipart segmented video playback
 - HTTP FLV low latency live stream playback
 - FLV over WebSocket live stream playback
@@ -29,28 +29,13 @@ flv.js is written in [ECMAScript 6][], transpiled into ECMAScript 5 by [Babel Co
 
 ## Installation
 ```bash
-npm install --save flv.js
+npm install enhance-flvjs --save
 ```
-
-## Build
-```bash
-npm install          # install dev-dependences
-npm install -g gulp  # install build tool
-gulp release         # packaged & minimized js will be emitted in dist folder
-```
-
-[cnpm](https://github.com/cnpm/cnpm) mirror is recommended if you are in Mainland China.
-
-## CORS
-If you use standalone video server for FLV stream, `Access-Control-Allow-Origin` header must be configured correctly on video server for cross-origin resource fetching.
-
-See [cors.md](docs/cors.md) for more details.
-
 ## Getting Started
 ```html
-<script src="flv.min.js"></script>
 <video id="videoElement"></video>
 <script>
+    import flvjs from 'enhance-flvjs';
     if (flvjs.isSupported()) {
         var videoElement = document.getElementById('videoElement');
         var flvPlayer = flvjs.createPlayer({
@@ -64,6 +49,14 @@ See [cors.md](docs/cors.md) for more details.
 </script>
 ```
 
+[cnpm](https://github.com/cnpm/cnpm) mirror is recommended if you are in Mainland China.
+
+## CORS
+If you use standalone video server for FLV stream, `Access-Control-Allow-Origin` header must be configured correctly on video server for cross-origin resource fetching.
+
+See [cors.md](docs/cors.md) for more details.
+
+
 ## Limitations
 - MP3 audio codec is currently not working on IE11 / Edge
 - HTTP FLV live stream is not currently working on all browsers, see [livestream.md](docs/livestream.md)
@@ -76,16 +69,6 @@ See [livestream.md](docs/livestream.md)
 
 ## API and Configuration
 See [api.md](docs/api.md)
-
-## Debug
-```bash
-npm install          # install dev-dependences
-npm install -g gulp  # install build tool
-npm run dev          # with incremental compile and auto reload
-```
-
-## Design
-See [design.md](docs/design.md)
 
 ## License
 ```
