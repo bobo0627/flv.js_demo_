@@ -7,22 +7,44 @@ const INIT = 'init',
     SHOTIMAGE = 'shotImage',
     BSERURL = 'http://33.95.241.120:8008';
 
-function Player(config) {
-    this.stream = config.stream;
-    this.appid = config.appid;
-    this.deviceid = config.deviceid;
-}
-Player.prototype = {
-    constructor: Player,
-    init: function() {
-        var player = document.getElementById('player');
+var Util = {
+    checkStream: function(stream) {
+        var index = stream.lastIndexOf('.');
+        var suffix = stream.substring(index+1);
+        if(suffix==='flv'){
+            return true;
+        }else{
+            console.error('格式不支持');
+            return false;
+        }
+    },
+    base64ToBlob: function (code) {
+        var parts = code.split(';base64,');
+        var contentType = parts[0].split(':')[1];
+        var raw = window.atob(parts[1]);
+        var rawLength = raw.length;
+        var uInt8Array = new Uint8Array(rawLength);
+        for (var i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+        }
+        return new Blob([uInt8Array], {type: contentType});
+    }
+
+};
+
+class Player{
+    constructor(config = {}) {
+        this.config = config;
+    }
+    create() {
+        const player = document.getElementById('player');
         if (flvjs.isSupported()) {
             if (this.pInstance) {
                 this.destory();
             }
             this.pInstance = flvjs.createPlayer({
                 type: 'flv',
-                url: this.stream,
+                url: this.config.stream,
                 hasVideo: true,
                 hasAudio: false,
                 isLive: true,
@@ -39,61 +61,61 @@ Player.prototype = {
             });
             this.pInstance.attachMediaElement(player);
             this.load();
-            this.start();
+            this.play();
         }
-    },
-    load: function() {
+    }
+    load() {
         this.pInstance.load();
-    },
-    start: function() {
+    }
+    play() {
         this.pInstance.play();
-    },
-    pause: function() {
+    }
+    pause() {
         this.pInstance.pause();
-    },
-    reconnect: function() {
-        var _this = this;
-        var times = 0;
-        var interval = setInterval(function(){
-            console.log(++times+'times reconnect...');
-            var xhr = new XMLHttpRequest();
-            var data = JSON.stringify({
-                appId: _this.appid,
-                deviceId: _this.deviceid,
-                type: "flv"
-            });
-            xhr.open('POST', BSERURL+'/v1/gb/stream/start', true);
-            xhr.setRequestHeader('Content-Type','application/json;charset=utf-8');
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState == 4 && xhr.status == 200) {
+    }
+    reconnect() {
+        let times = 0;
+        const interval = setInterval(() => {
+            console.info(++times+'times reconnect...');
+            fetch(`${this.config.reconnectAPI || BSERURL}/v1/gb/stream/start`, {
+                body: JSON.stringify({
+                    appId: this.config.appid,
+                    deviceId: this.config.deviceid,
+                    type: "flv"
+                }),
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
+            })
+            .then(res => {
+                if(res.ok){
                     clearInterval(interval);
-                    var response = JSON.parse(xhr.response);
-                    _this.stream = response.data[0].playUrl;
-                    _this.init();
+                    let json = res.json();
+                    this.stream = json.data[0].playUrl;
+                    this.init();
+                }else{
+                    console.error(res.message);
                 }
                 if(times>100 && interval){
                     clearInterval(interval);
                 }
-            };
-            xhr.send(data);
+            })
+            .catch(err => {
+                throw new Error(err);
+            });
         }, 2000);
-    },
-    destory: function() {
+    }
+    destory() {
         this.pInstance.pause();
         this.pInstance.unload();
         this.pInstance.detachMediaElement();
         this.pInstance.destroy();
         this.pInstance = null;
-    },
-    getCurrentTime() {
-        window.parent.postMessage({
-            action: 'currentTime',
-            result: {
-                time: document.getElementById('player').currentTime
-            }
-        }, '*');
-    },
-    screenshot: function() {
+    }
+    screenshot() {
         const canvas = document.createElement("canvas");
         const video = document.getElementById('player');
         canvas.width = video.videoWidth;
@@ -113,72 +135,63 @@ Player.prototype = {
         // aLink.href = URL.createObjectURL(blob);
         // aLink.click();
     }
+    getCurrentTime() {
+        window.parent.postMessage({
+            action: 'currentTime',
+            result: {
+                time: document.getElementById('player').currentTime
+            }
+        }, '*');
+    }
 }
 
-var Util = {
-    checkStream: function(stream) {
-        var index = stream.lastIndexOf('.');
-        var suffix = stream.substring(index+1);
-        if(suffix==='flv'){
-            return true;
-        }else{
-            alert('格式不支持');
-            return false;
-        }
-    },
-    base64ToBlob: function (code) {
-        var parts = code.split(';base64,');
-        var contentType = parts[0].split(':')[1];
-        var raw = window.atob(parts[1]);
-        var rawLength = raw.length;
-        var uInt8Array = new Uint8Array(rawLength);
-        for (var i = 0; i < rawLength; ++i) {
-        uInt8Array[i] = raw.charCodeAt(i);
-        }
-        return new Blob([uInt8Array], {type: contentType});
-    }
-
-};
-
-var searchs = window.location.search;
-if(searchs){
+const init = (searchs) => {
     searchs = searchs.substring(1).split('&');
     var config = new Object();
-    searchs.forEach(function(item){
-        var param = item.split('=');
+    searchs.forEach(item => {
+        const param = item.split('=');
         config[param[0].toLowerCase()] = param[1];
     });
-    if(config.stream){
-        var szPlayer = new Player(config);
-        szPlayer.init();
+    if(config.stream && Util.checkStream(config.stream)){
+        const szPlayer = new Player(config);
+        szPlayer.create();
+        return szPlayer;
     }else{
-        alert('没有流地址');
+        console.error('没有流地址');
+        return;
     }
+};
+
+let searchs = window.location.search, szPlayer;
+if(searchs){
+    szPlayer = init(searchs);
 }
 
 window.addEventListener('message', function(event){
-    switch(event.data.action) {
-        case INIT:  szPlayer.init();
-            break;
-        case START: szPlayer.start();
-            break;
-        case PAUSE: szPlayer.pause();
-            break;
-        case DESTORY: szPlayer.destory();
-            break;
-        case DISCONNECT: szPlayer.reconnect();
-            break;
-        case CURRENTTIME: szPlayer.getCurrentTime();
-            break;
-        case SHOTIMAGE: szPlayer.screenshot();
-            break;
-        default: 
-            break;
-    }  
+    if(szPlayer){
+        switch(event.data.action) {
+            case INIT:  szPlayer.create();
+                break;
+            case START: szPlayer.play();
+                break;
+            case PAUSE: szPlayer.pause();
+                break;
+            case DESTORY: szPlayer.destory();
+                break;
+            case DISCONNECT: szPlayer.reconnect();
+                break;
+            case CURRENTTIME: szPlayer.getCurrentTime();
+                break;
+            case SHOTIMAGE: szPlayer.screenshot();
+                break;
+            default: 
+                break;
+        }  
+    }
 }, false);
 
 document.addEventListener('visibilitychange',function(){ //浏览器切换事件
     if(document.visibilityState=='visible') {
-        szPlayer.init();
+        szPlayer.create();
     }
 });
