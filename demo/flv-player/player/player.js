@@ -7,10 +7,10 @@ const INIT = 'init',
     SHOTIMAGE = 'shotImage',
     BSERURL = 'http://33.95.241.120:8008';
 
-var Util = {
-    checkStream: function(stream) {
-        var index = stream.lastIndexOf('.');
-        var suffix = stream.substring(index+1);
+const Util = {
+    checkStream(stream) {
+        const index = stream.lastIndexOf('.');
+        const suffix = stream.substring(index+1);
         if(suffix==='flv'){
             return true;
         }else{
@@ -18,14 +18,14 @@ var Util = {
             return false;
         }
     },
-    base64ToBlob: function (code) {
-        var parts = code.split(';base64,');
-        var contentType = parts[0].split(':')[1];
-        var raw = window.atob(parts[1]);
-        var rawLength = raw.length;
-        var uInt8Array = new Uint8Array(rawLength);
-        for (var i = 0; i < rawLength; ++i) {
-        uInt8Array[i] = raw.charCodeAt(i);
+    base64ToBlob(code) {
+        let parts = code.split(';base64,');
+        let contentType = parts[0].split(':')[1];
+        let raw = window.atob(parts[1]);
+        let rawLength = raw.length;
+        let uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+            uInt8Array[i] = raw.charCodeAt(i);
         }
         return new Blob([uInt8Array], {type: contentType});
     }
