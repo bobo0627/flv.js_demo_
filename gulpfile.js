@@ -89,7 +89,7 @@ gulp.task('watch', ['clean', 'minimize'], function () {
             port: 8000,
             open: false
         });
-        require('opn')('http://localhost:8000/demo/flv-player/demo.html');
+        require('opn')('http://localhost:8000/demo/flv-player/demo1.html');
     });
 });
 

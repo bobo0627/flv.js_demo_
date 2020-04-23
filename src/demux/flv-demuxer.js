@@ -358,10 +358,13 @@ class FLVDemuxer {
         }
 
         // dispatch parsed frames to consumer (typically, the remuxer)
-        if (this._isInitialMetadataDispatched()) {
-            if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
-                this._onDataAvailable(this._audioTrack, this._videoTrack);
-            }
+        // if (this._isInitialMetadataDispatched()) {
+        //     if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+        //         this._onDataAvailable(this._audioTrack, this._videoTrack);
+        //     }
+        // }
+        if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+            this._onDataAvailable(this._audioTrack, this._videoTrack);
         }
 
         return offset;  // consumed bytes, just equals latest offset index
