@@ -133,7 +133,7 @@ gulp.task('minimize', ['lint', 'build'], function () {
     };
 
     return gulp.src('./dist/flv.js')
-        .pipe(rename({extname: '.min.js'}))
+        .pipe(rename({extname: '.packed.js'}))
         .pipe(sourcemaps.init({loadMaps: true}))
         .pipe(uglify(options))
         .on('error', console.error.bind(console))
