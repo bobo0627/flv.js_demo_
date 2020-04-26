@@ -1,8 +1,8 @@
 {
   "name": "enhance-flvjs",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "HTML5 FLV Player",
-  "main": "./dist/flv.js",
+  "main": "./dist/flv.min.js",
   "module": "./src/flv.js",
   "jsnext:main": "./src/flv.js",
   "types": "./d.ts/flv.d.ts",

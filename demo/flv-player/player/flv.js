@@ -6861,7 +6861,7 @@ Object.defineProperty(flvjs, 'version', {
     enumerable: true,
     get: function get() {
         // replaced by browserify-versionify transform
-        return '1.5.0';
+        return '2.0.1';
     }
 });
 

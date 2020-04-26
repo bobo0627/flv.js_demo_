@@ -59,7 +59,7 @@ function doBundle(b) {
         .pipe(buffer())
         .pipe(sourcemaps.init({loadMaps: true}))
         .pipe(sourcemaps.write('./'))
-        .pipe(gulp.dest('./demo/flv-player/player/'));
+        .pipe(gulp.dest('./dist/'));
 }
 
 function doLint(paths, exit) {
@@ -95,7 +95,7 @@ gulp.task('watch', ['clean', 'minimize'], function () {
 
 gulp.task('clean', function () {
     return del([
-        './demo/flv-player/player/flv.*'
+        './dist/flv.*'
     ]);
 });
 
@@ -132,11 +132,11 @@ gulp.task('minimize', ['lint', 'build'], function () {
         }
     };
 
-    return gulp.src('./demo/flv-player/player/flv.js')
+    return gulp.src('./dist/flv.js')
         .pipe(rename({extname: '.min.js'}))
         .pipe(sourcemaps.init({loadMaps: true}))
         .pipe(uglify(options))
         .on('error', console.error.bind(console))
         .pipe(sourcemaps.write('./'))
-        .pipe(gulp.dest('./demo/flv-player/player/'));
+        .pipe(gulp.dest('./dist/'));
 });
