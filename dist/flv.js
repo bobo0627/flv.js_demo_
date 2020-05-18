@@ -1911,7 +1911,7 @@ var Features = function () {
 
 exports.default = Features;
 
-},{"../config.js":5,"../io/io-controller.js":23}],7:[function(_dereq_,module,exports){
+},{"../config.js":5,"../io/io-controller.js":25}],7:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2498,9 +2498,9 @@ var MSEController = function () {
             }
 
             if (this._mediaElement) {
-                this._mediaElement.src = '';
+                /*this._mediaElement.src = '';
                 this._mediaElement.removeAttribute('src');
-                this._mediaElement = null;
+                this._mediaElement = null;*/
             }
             if (this._mediaSourceObjectURL) {
                 window.URL.revokeObjectURL(this._mediaSourceObjectURL);
@@ -2905,7 +2905,7 @@ var MSEController = function () {
 
 exports.default = MSEController;
 
-},{"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./media-segment-info.js":8,"./mse-events.js":10,"events":2}],10:[function(_dereq_,module,exports){
+},{"../utils/browser.js":41,"../utils/exception.js":42,"../utils/logger.js":43,"./media-segment-info.js":8,"./mse-events.js":10,"events":2}],10:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3278,7 +3278,7 @@ var Transmuxer = function () {
 
 exports.default = Transmuxer;
 
-},{"../utils/logger.js":41,"../utils/logging-control.js":42,"./media-info.js":7,"./transmuxing-controller.js":12,"./transmuxing-events.js":13,"./transmuxing-worker.js":14,"events":2,"webworkify":4}],12:[function(_dereq_,module,exports){
+},{"../utils/logger.js":43,"../utils/logging-control.js":44,"./media-info.js":7,"./transmuxing-controller.js":12,"./transmuxing-events.js":13,"./transmuxing-worker.js":14,"events":2,"webworkify":4}],12:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3699,7 +3699,7 @@ var TransmuxingController = function () {
             _logger2.default.e(this.TAG, 'IOException: type = ' + type + ', code = ' + info.code + ', msg = ' + info.msg);
 
             self.postMessage({
-                action: 'disconnect'
+                msg: 'disconnect'
             });
 
             this._emitter.emit(_transmuxingEvents2.default.IO_ERROR, type, info);
@@ -3793,7 +3793,7 @@ var TransmuxingController = function () {
 
 exports.default = TransmuxingController;
 
-},{"../demux/demux-errors.js":16,"../demux/flv-demuxer.js":18,"../io/io-controller.js":23,"../io/loader.js":24,"../remux/mp4-remuxer.js":38,"../utils/browser.js":39,"../utils/logger.js":41,"./media-info.js":7,"./transmuxing-events.js":13,"events":2}],13:[function(_dereq_,module,exports){
+},{"../demux/demux-errors.js":16,"../demux/flv-demuxer.js":18,"../io/io-controller.js":25,"../io/loader.js":26,"../remux/mp4-remuxer.js":40,"../utils/browser.js":41,"../utils/logger.js":43,"./media-info.js":7,"./transmuxing-events.js":13,"events":2}],13:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4060,7 +4060,7 @@ var TransmuxingWorker = function TransmuxingWorker(self) {
 
 exports.default = TransmuxingWorker;
 
-},{"../utils/logger.js":41,"../utils/logging-control.js":42,"../utils/polyfill.js":43,"./transmuxing-controller.js":12,"./transmuxing-events.js":13}],15:[function(_dereq_,module,exports){
+},{"../utils/logger.js":43,"../utils/logging-control.js":44,"../utils/polyfill.js":45,"./transmuxing-controller.js":12,"./transmuxing-events.js":13}],15:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4350,7 +4350,7 @@ var AMF = function () {
 
 exports.default = AMF;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"../utils/utf8-conv.js":44}],16:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42,"../utils/logger.js":43,"../utils/utf8-conv.js":46}],16:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4521,7 +4521,7 @@ var ExpGolomb = function () {
 
 exports.default = ExpGolomb;
 
-},{"../utils/exception.js":40}],18:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42}],18:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4560,6 +4560,10 @@ var _spsParser = _dereq_('./sps-parser.js');
 
 var _spsParser2 = _interopRequireDefault(_spsParser);
 
+var _vpsParser = _dereq_('./vps-parser.js');
+
+var _vpsParser2 = _interopRequireDefault(_vpsParser);
+
 var _demuxErrors = _dereq_('./demux-errors.js');
 
 var _demuxErrors2 = _interopRequireDefault(_demuxErrors);
@@ -4569,6 +4573,10 @@ var _mediaInfo = _dereq_('../core/media-info.js');
 var _mediaInfo2 = _interopRequireDefault(_mediaInfo);
 
 var _exception = _dereq_('../utils/exception.js');
+
+var _hevcGolomb = _dereq_('./hevc-golomb.js');
+
+var _hevcGolomb2 = _interopRequireDefault(_hevcGolomb);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -4804,10 +4812,13 @@ var FLVDemuxer = function () {
             }
 
             // dispatch parsed frames to consumer (typically, the remuxer)
-            if (this._isInitialMetadataDispatched()) {
-                if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
-                    this._onDataAvailable(this._audioTrack, this._videoTrack);
-                }
+            // if (this._isInitialMetadataDispatched()) {
+            //     if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+            //         this._onDataAvailable(this._audioTrack, this._videoTrack);
+            //     }
+            // }
+            if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+                this._onDataAvailable(this._audioTrack, this._videoTrack);
             }
 
             return offset; // consumed bytes, just equals latest offset index
@@ -5314,16 +5325,17 @@ var FLVDemuxer = function () {
             var frameType = (spec & 240) >>> 4;
             var codecId = spec & 15;
 
-            if (codecId !== 7) {
+            if (codecId !== 7 && codecId !== 12) {
                 this._onError(_demuxErrors2.default.CODEC_UNSUPPORTED, 'Flv: Unsupported codec in video frame: ' + codecId);
                 return;
             }
 
-            this._parseAVCVideoPacket(arrayBuffer, dataOffset + 1, dataSize - 1, tagTimestamp, tagPosition, frameType);
+            this._parseAVCVideoPacket(codecId, arrayBuffer, dataOffset + 1, dataSize - 1, tagTimestamp, tagPosition, frameType);
         }
     }, {
         key: '_parseAVCVideoPacket',
-        value: function _parseAVCVideoPacket(arrayBuffer, dataOffset, dataSize, tagTimestamp, tagPosition, frameType) {
+        value: function _parseAVCVideoPacket(codecId, arrayBuffer, dataOffset, dataSize, tagTimestamp, tagPosition, frameType) {
+
             if (dataSize < 4) {
                 _logger2.default.w(this.TAG, 'Flv: Invalid AVC packet, missing AVCPacketType or/and CompositionTime');
                 return;
@@ -5336,18 +5348,187 @@ var FLVDemuxer = function () {
             var cts_unsigned = v.getUint32(0, !le) & 0x00FFFFFF;
             var cts = cts_unsigned << 8 >> 8; // convert to 24-bit signed int
 
-            if (packetType === 0) {
-                // AVCDecoderConfigurationRecord
-                this._parseAVCDecoderConfigurationRecord(arrayBuffer, dataOffset + 4, dataSize - 4);
-            } else if (packetType === 1) {
-                // One or more Nalus
-                this._parseAVCVideoData(arrayBuffer, dataOffset + 4, dataSize - 4, tagTimestamp, tagPosition, frameType, cts);
-            } else if (packetType === 2) {
-                // empty, AVC end of sequence
+            if (codecId == 7) {
+                if (packetType === 0) {
+                    // AVCDecoderConfigurationRecord
+                    this._parseAVCDecoderConfigurationRecord(arrayBuffer, dataOffset + 4, dataSize - 4);
+                } else if (packetType === 1) {
+                    // One or more Nalus
+                    this._parseAVCVideoData(arrayBuffer, dataOffset + 4, dataSize - 4, tagTimestamp, tagPosition, frameType, cts);
+                } else if (packetType === 2) {
+                    // empty, AVC end of sequence
+                } else {
+                    this._onError(_demuxErrors2.default.FORMAT_ERROR, 'Flv: Invalid video packet type ' + packetType);
+                    return;
+                }
             } else {
-                this._onError(_demuxErrors2.default.FORMAT_ERROR, 'Flv: Invalid video packet type ' + packetType);
+                if (packetType === 0) {
+                    // AVCDecoderConfigurationRecord
+                    this._parseHEVCDecoderConfigurationRecord(arrayBuffer, dataOffset + 4, dataSize - 4);
+                } else if (packetType === 1) {
+                    // One or more Nalus
+                    this._parseAVCVideoData(arrayBuffer, dataOffset + 4, dataSize - 4, tagTimestamp, tagPosition, frameType, cts);
+                } else if (packetType === 2) {
+                    // empty, AVC end of sequence
+                } else {
+                    this._onError(_demuxErrors2.default.FORMAT_ERROR, 'Flv: Invalid video packet type ' + packetType);
+                    return;
+                }
+            }
+        }
+    }, {
+        key: '_parseHEVCDecoderConfigurationRecord',
+        value: function _parseHEVCDecoderConfigurationRecord(arrayBuffer, dataOffset, dataSize) {
+            if (dataSize < 22) {
+                _logger2.default.w(this.TAG, 'Flv: Invalid _parseHEVCDecoderConfigurationRecord, lack of data!');
                 return;
             }
+
+            var meta = this._videoMetadata;
+            var track = this._videoTrack;
+            var le = this._littleEndian;
+
+            if (!meta) {
+                if (this._hasVideo === false && this._hasVideoFlagOverrided === false) {
+                    this._hasVideo = true;
+                    this._mediaInfo.hasVideo = true;
+                }
+
+                meta = this._videoMetadata = {};
+                meta.type = 'video';
+                meta.id = track.id;
+                meta.timescale = this._timescale;
+                meta.duration = this._duration;
+                meta.propty = 'hevc';
+            } else {
+                if (typeof meta.avcc !== 'undefined') {
+                    _logger2.default.w(this.TAG, 'Found another AVCDecoderConfigurationRecord!');
+                }
+            }
+
+            //let offset = 0;
+            var v = new DataView(arrayBuffer, dataOffset, dataSize);
+            var uint8array = new Uint8Array(arrayBuffer, dataOffset, dataSize);
+            var bs = new _hevcGolomb2.default(uint8array, uint8array.byteLength);
+            var version = v.getUint8(0);
+            //offset = offset + 1;
+            var general = v.getUint8(1);
+            var general_profile_space = bs.GetWord(2);
+            var general_tier_flag = bs.GetWord(1);
+            var general_profile_idc = bs.GetWord(5);
+            //offset = offset + 1;
+
+            var general_profile_compatibility_flags = bs.GetWord(32);
+            var general_constraint_indicator_flags = bs.GetWord(48);
+            var general_level_idc = bs.GetWord(8);
+            bs.GetWord(4);
+            var min_spatial_segmentation_idc = bs.GetWord(12);
+            bs.GetWord(6);
+            var parallelismType = bs.GetWord(2);
+            bs.GetWord(6);
+            var chromaFormat = bs.GetWord(2);
+
+            bs.GetWord(5);
+            var bitDepthLumaMinus8 = bs.GetWord(3);
+            var bitDepthChromaMinus8 = bs.GetWord(3);
+            var avgFrameRate = bs.GetWord(16);
+            var constantFrameRate = bs.GetWord(2);
+            var numTemporalLayers = bs.GetWord(3);
+            var temporalIdNested = bs.GetWord(1);
+
+            var lengthSizeMinusOne = bs.GetWord(2);
+
+            var numOfArrays = v.getUint8(22);
+            //offset = offset + 1;
+            var offset = 23;
+
+            for (var i = 0; i < numOfArrays; i++) {
+                // let array_completeness = v.getUint8(offset)&0x80;
+                // offset = offset + 1;
+                var NAL_unit_type = v.getUint8(offset) & 0x3f;
+                offset = offset + 1;
+
+                var numNalus = v.getUint16(offset, !le);
+                offset = offset + 2;
+                for (var j = 0; j < numNalus; j++) {
+                    var nalUnitLength = v.getUint16(offset, !le);
+                    offset = offset + 2;
+                    var data = new DataView(arrayBuffer, dataOffset + offset, nalUnitLength);
+                    var dataUint8 = new Uint8Array(arrayBuffer, dataOffset + offset, nalUnitLength);
+                    offset = offset + nalUnitLength;
+
+                    var type = data.getUint8(0);
+                    if (type == 0x42) {
+                        //sps
+                        var config = _spsParser2.default.parseHevcSPS(dataUint8);
+
+                        meta.codecWidth = config.codec_size.width;
+                        meta.codecHeight = config.codec_size.height;
+                        meta.presentWidth = config.present_size.width;
+                        meta.presentHeight = config.present_size.height;
+
+                        meta.profile = general_profile_idc; //config.profile_string;
+                        meta.level = general_level_idc; //config.level_string;
+                        meta.bitDepth = bitDepthLumaMinus8; //config.bit_depth;
+                        meta.chromaFormat = chromaFormat; //config.chroma_format;
+                        meta.sarRatio = config.sar_ratio;
+
+                        if (config.frame_rate.fixed === false || config.frame_rate.fps_num === 0 || config.frame_rate.fps_den === 0) {
+                            meta.frameRate = this._referenceFrameRate;
+                        }
+
+                        var codecArray = dataUint8.subarray(1, 4);
+                    } else if (type == 0x44) {//pps
+
+                    } else if (type == 0x40) {
+                        //vps
+                        var mainTier = data.getUint8(6);
+
+                        var L = data.getUint8(20); //L
+                        var _version = data.getUint8(12); //
+                        meta.codec = 'hev1.' + data.getUint8(6).toString() + '.6.L' + data.getUint8(20).toString() + '.' + data.getUint8(12).toString(16);
+                    } else if (type == 0x4E) {//SEI
+
+                    } else if (type == 0x26) {//IDR
+
+                    }
+                }
+            }
+
+            var mi = this._mediaInfo;
+            mi.width = meta.codecWidth;
+            mi.height = meta.codecHeight;
+            mi.fps = 25; //meta.frameRate.fps;
+            mi.sarNum = meta.sarRatio.width;
+            mi.sarDen = meta.sarRatio.height;
+            mi.videoCodec = meta.codec;
+
+            if (mi.hasAudio) {
+                if (mi.audioCodec != null) {
+                    mi.mimeType = 'video/x-flv; codecs="' + mi.videoCodec + ',' + mi.audioCodec + '"';
+                }
+            } else {
+                mi.mimeType = 'video/x-flv; codecs="' + mi.videoCodec + '"';
+            }
+            if (mi.isComplete()) {
+                this._onMediaInfo(mi);
+            }
+
+            meta.hvcc = new Uint8Array(dataSize);
+            meta.hvcc.set(new Uint8Array(arrayBuffer, dataOffset, dataSize), 0);
+            _logger2.default.v(this.TAG, 'Parsed AVCDecoderConfigurationRecord');
+
+            if (this._isInitialMetadataDispatched()) {
+                // flush parsed frames
+                if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+                    this._onDataAvailable(this._audioTrack, this._videoTrack);
+                }
+            } else {
+                this._videoInitialMetadataDispatched = true;
+            }
+            // notify new metadata
+            this._dispatch = false;
+            this._onTrackMetadata('video', meta);
         }
     }, {
         key: '_parseAVCDecoderConfigurationRecord',
@@ -5373,6 +5554,7 @@ var FLVDemuxer = function () {
                 meta.id = track.id;
                 meta.timescale = this._timescale;
                 meta.duration = this._duration;
+                meta.propty = 'avc';
             } else {
                 if (typeof meta.avcc !== 'undefined') {
                     _logger2.default.w(this.TAG, 'Found another AVCDecoderConfigurationRecord!');
@@ -5713,7 +5895,97 @@ var FLVDemuxer = function () {
 
 exports.default = FLVDemuxer;
 
-},{"../core/media-info.js":7,"../utils/exception.js":40,"../utils/logger.js":41,"./amf-parser.js":15,"./demux-errors.js":16,"./sps-parser.js":19}],19:[function(_dereq_,module,exports){
+},{"../core/media-info.js":7,"../utils/exception.js":42,"../utils/logger.js":43,"./amf-parser.js":15,"./demux-errors.js":16,"./hevc-golomb.js":19,"./sps-parser.js":20,"./vps-parser.js":21}],19:[function(_dereq_,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var NALBitstream = function () {
+    function NALBitstream(uint8array, len) {
+        _classCallCheck(this, NALBitstream);
+
+        this.m_data = uint8array;
+        this.m_len = len;
+        this.m_idx = 0;
+        this.m_bits = 0;
+        this.m_byte = 0;
+        this.m_zeros = 0;
+    }
+
+    _createClass(NALBitstream, [{
+        key: "GetLeft",
+        value: function GetLeft() {
+            return this.m_len - this.m_idx;
+        }
+    }, {
+        key: "GetBYTE",
+        value: function GetBYTE() {
+            if (this.m_idx >= this.m_len) return 0;
+            var b = this.m_data[this.m_idx++];
+            if (b == 0) {
+                this.m_zeros++;
+                if (this.m_idx < this.m_len && this.m_zeros == 2 && this.m_data[this.m_idx] == 0x03) {
+                    this.m_idx++;
+                    this.m_zeros = 0;
+                }
+            } else this.m_zeros = 0;
+
+            return b;
+        }
+    }, {
+        key: "GetBit",
+        value: function GetBit() {
+            if (this.m_bits == 0) {
+                this.m_byte = this.GetBYTE();
+                this.m_bits = 8;
+            }
+            this.m_bits--;
+            return this.m_byte >> this.m_bits & 0x1;
+        }
+    }, {
+        key: "GetWord",
+        value: function GetWord(bits) {
+            var u = 0;
+            while (bits > 0) {
+                u <<= 1;
+                u |= this.GetBit();
+                bits--;
+            }
+            return u;
+        }
+    }, {
+        key: "GetUE",
+        value: function GetUE() {
+            var zeros = 0;
+            while (this.m_idx < this.m_len && this.GetBit() == 0) {
+                zeros++;
+            }return this.GetWord(zeros) + ((1 << zeros) - 1);
+        }
+    }, {
+        key: "GetSE",
+        value: function GetSE() {
+            var UE = this.GetUE();
+            var positive = UE & 1;
+            var SE = UE + 1 >> 1;
+            if (!positive) {
+                SE = -SE;
+            }
+            return SE;
+        }
+    }]);
+
+    return NALBitstream;
+}();
+
+exports.default = NALBitstream;
+
+},{}],20:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5741,6 +6013,10 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _expGolomb = _dereq_('./exp-golomb.js');
 
 var _expGolomb2 = _interopRequireDefault(_expGolomb);
+
+var _hevcGolomb = _dereq_('./hevc-golomb.js');
+
+var _hevcGolomb2 = _interopRequireDefault(_hevcGolomb);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -5771,6 +6047,311 @@ var SPSParser = function () {
             }
 
             return new Uint8Array(dst.buffer, 0, dst_idx);
+        }
+    }, {
+        key: 'parseHevcSPS',
+        value: function parseHevcSPS(uint8array) {
+            var hevcgb = new _hevcGolomb2.default(uint8array, uint8array.byteLength);
+            hevcgb.GetWord(4);
+            var sps_max_sub_layers_minus1 = hevcgb.GetWord(3);
+
+            if (sps_max_sub_layers_minus1 > 6) {
+                return;
+            }
+            var sps_temporal_id_nesting_flag = hevcgb.GetWord(1);
+            //let sps_seq_parameter_set_id = hevcgb.GetUE();
+            var profile_space = hevcgb.GetWord(2);
+            var tier_flag = hevcgb.GetWord(1);
+            var profile = hevcgb.GetWord(5);
+            hevcgb.GetWord(32); //
+            hevcgb.GetWord(1); // 
+            hevcgb.GetWord(1); // 
+            hevcgb.GetWord(1); // 
+            hevcgb.GetWord(1); //  
+            hevcgb.GetWord(44); // 
+            var level = hevcgb.GetWord(8); // general_level_idc
+            var sub_layer_profile_present_flag = new Array();
+            var sub_layer_level_present_flag = new Array();
+            for (var i = 0; i < sps_max_sub_layers_minus1; i++) {
+                sub_layer_profile_present_flag[i] = hevcgb.GetWord(1);
+                sub_layer_level_present_flag[i] = hevcgb.GetWord(1);
+            }
+            if (sps_max_sub_layers_minus1 > 0) {
+                for (var _i = sps_max_sub_layers_minus1; _i < 8; _i++) {
+                    hevcgb.GetWord(2);
+                }
+            }
+            for (var _i2 = 0; _i2 < sps_max_sub_layers_minus1; _i2++) {
+                if (sub_layer_profile_present_flag[_i2]) {
+                    hevcgb.GetWord(2);
+                    hevcgb.GetWord(1);
+                    hevcgb.GetWord(5);
+                    hevcgb.GetWord(32);
+                    hevcgb.GetWord(1);
+                    hevcgb.GetWord(1);
+                    hevcgb.GetWord(1);
+                    hevcgb.GetWord(1);
+                    hevcgb.GetWord(44);
+                }
+                if (sub_layer_level_present_flag[_i2]) {
+                    hevcgb.GetWord(8); // sub_layer_level_idc[i]
+                }
+            }
+            var sps_seq_parameter_set_id = hevcgb.GetUE();
+            if (sps_seq_parameter_set_id > 15) {
+                return false;
+            }
+            var chroma_format_idc = hevcgb.GetUE();
+            if (sps_seq_parameter_set_id > 3) {
+                return false;
+            }
+            if (chroma_format_idc == 3) {
+                hevcgb.GetWord(1); //  
+            }
+            var width = hevcgb.GetUE(); // pic_width_in_luma_samples
+            var height = hevcgb.GetUE(); // pic_height_in_luma_samples
+            if (hevcgb.GetWord(1)) {
+                hevcgb.GetUE();
+                hevcgb.GetUE();
+                hevcgb.GetUE();
+                hevcgb.GetUE();
+            }
+            var bit_depth_luma_minus8 = hevcgb.GetUE() + 8;
+            var bit_depth_chroma_minus8 = hevcgb.GetUE() + 8;
+            if (bit_depth_luma_minus8 != bit_depth_chroma_minus8) {
+                return false;
+            }
+
+            var log2_max_poc_lsb = hevcgb.GetUE();
+            if (log2_max_poc_lsb > 16) {
+                return false;
+            }
+
+            var sublayer_ordering_info = hevcgb.GetWord(1);
+            if (sublayer_ordering_info) {
+                sublayer_ordering_info = 0;
+            } else {
+                sublayer_ordering_info = sps_max_sub_layers_minus1;
+            }
+
+            //let start = 0;//sublayer_ordering_info ? 0 : sps_max_sub_layers_minus1 - 1;
+            //  let val = sublayer_ordering_info - start;
+            //let i = start;
+            //let temporal_layerArr = new Array();
+            for (var j = sublayer_ordering_info; j < sps_max_sub_layers_minus1; j++) {
+                hevcgb.GetUE();
+                hevcgb.GetUE();
+                hevcgb.GetUE();
+            }
+
+            var log2_min_cb_size = hevcgb.GetUE() + 3;
+            var log2_diff_max_min_coding_block_size = hevcgb.GetUE();
+            var log2_min_tb_size = hevcgb.GetUE() + 2;
+            var log2_diff_max_min_transform_block_size1 = hevcgb.GetUE();
+            var log2_max_trafo_size = log2_diff_max_min_transform_block_size1 + log2_min_tb_size;
+
+            var max_transform_hierarchy_depth_inter = hevcgb.GetUE();
+            var max_transform_hierarchy_depth_intra = hevcgb.GetUE();
+
+            var scaling_list_enable_flag = hevcgb.GetWord(1);
+            if (scaling_list_enable_flag && hevcgb.GetWord(1)) {
+                for (var size_id = 0; size_id < 4; size_id++) {
+                    for (var matrix_id = 0; matrix_id < (size_id == 3 ? 2 : 6); matrix_id++) {
+                        var scaling_list_pred_mode_flag = hevcgb.GetWord(1);
+                        if (!scaling_list_pred_mode_flag) {
+                            hevcgb.GetUE();
+                        } else {
+                            var tmp = 1 << 4 + (size_id << 1);
+                            var num_coeffs = 0;
+                            if (tmp > 64) {
+                                num_coeffs = 64;
+                            } else {
+                                num_coeffs = tmp;
+                            }
+
+                            if (size_id > 1) {
+                                hevcgb.GetSE();
+                            }
+
+                            for (var k = 0; k < num_coeffs; k++) {
+                                hevcgb.GetSE();
+                            }
+                        }
+                    }
+                }
+            }
+
+            hevcgb.GetWord(1);
+            hevcgb.GetWord(1);
+            var pcm_enabled_flag = hevcgb.GetWord(1);
+            if (pcm_enabled_flag) {
+                var pcm_bit_depth = hevcgb.GetWord(4) + 1;
+                var pcm_bit_depth_chroma = hevcgb.GetWord(4) + 1;
+                var pcm_log2_min_pcm_cb_size = hevcgb.GetUE() + 3;
+                var pcm_log2_max_pcm_cb_size = hevcgb.GetUE() + pcm_log2_min_pcm_cb_size;
+
+                var pcm_loop_filter_disable_flag = hevcgb.GetWord(1);
+            }
+
+            var nb_st_rps = hevcgb.GetUE();
+            if (nb_st_rps > 64) {
+                return false;
+            }
+
+            var num_delta_pocs = new Array();
+            for (var _i3 = 0; _i3 < nb_st_rps; _i3++) {
+                var rps_predict = hevcgb.GetWord(1);
+                if (rps_predict && _i3) {
+                    if (_i3 > nb_st_rps) {
+                        return false;
+                    }
+                    var delta_rps_sign = hevcgb.GetWord(1);
+                    var abs_delta_rps = hevcgb.GetUE() + 1;
+
+                    //let delta_rps      = (1 - (delta_rps_sign << 1)) * abs_delta_rps;
+
+                    num_delta_pocs[_i3] = 0;
+
+                    for (var _j = 0; _j <= num_delta_pocs[_i3 - 1]; _j++) {
+                        var use_delta_flag = 0;
+                        var used_by_curr_pic_flag = hevcgb.GetWord(1);
+                        if (!used_by_curr_pic_flag) use_delta_flag = hevcgb.GetWord(1);
+
+                        if (used_by_curr_pic_flag || use_delta_flag) num_delta_pocs[_i3]++;
+                    }
+                    //let 
+                } else {
+                    var num_negative_pics = hevcgb.GetUE();
+                    var nb_positive_pics = hevcgb.GetUE();
+
+                    if (nb_positive_pics + num_negative_pics > 2 * hevcgb.GetLeft()) {
+                        return false;
+                    }
+
+                    num_delta_pocs[_i3] = num_negative_pics + nb_positive_pics;
+
+                    for (var _j2 = 0; _j2 < num_negative_pics; _j2++) {
+                        hevcgb.GetUE();
+                        hevcgb.GetWord(1);
+                    }
+
+                    for (var _k = 0; _k < nb_positive_pics; _k++) {
+                        hevcgb.GetUE();
+                        hevcgb.GetWord(1);
+                    }
+                }
+            }
+
+            if (hevcgb.GetWord(1)) {
+                var num_long_term_ref_pics_sps = hevcgb.GetUE();
+                if (num_long_term_ref_pics_sps > 31) {
+                    return false;
+                }
+                for (var _i4 = 0; _i4 < num_long_term_ref_pics_sps; _i4++) {
+                    // num_long_term_ref_pics_sps
+                    var len = 16;
+                    if (log2_max_poc_lsb + 4 < 16) {
+                        len = log2_max_poc_lsb + 4;
+                    }
+
+                    hevcgb.GetWord(len); // lt_ref_pic_poc_lsb_sps[i]
+                    hevcgb.GetWord(1); // used_by_curr_pic_lt_sps_flag[i]
+                }
+            }
+            var sps_temporal_mvp_enabled_flag = hevcgb.GetWord(1);
+            var strong_intra_smoothing_enabled_flag = hevcgb.GetWord(1);
+
+            var fps = 0,
+                fps_fixed = true,
+                fps_num = 0,
+                fps_den = 0;
+            var vui_parameters_present_flag = hevcgb.GetWord(1);
+            if (vui_parameters_present_flag) {
+                if (hevcgb.GetWord(1)) {
+                    var aspect_ratio_idc = hevcgb.GetWord(8);
+                    if (aspect_ratio_idc == 255) {
+                        var sar_width = hevcgb.GetWord(16);
+                        var sar_height = hevcgb.GetWord(16);
+                    }
+                }
+
+                if (hevcgb.GetWord(1)) {
+                    hevcgb.GetWord(1);
+                }
+
+                if (hevcgb.GetWord(1)) {
+                    var video_format = hevcgb.GetWord(3);
+                    var video_full_range_flag = hevcgb.GetWord(1);
+
+                    if (hevcgb.GetWord(1)) {
+                        hevcgb.GetWord(24);
+                    }
+                }
+
+                if (hevcgb.GetWord(1)) {
+                    hevcgb.GetUE();
+                    hevcgb.GetUE();
+                }
+
+                hevcgb.GetWord(3);
+
+                if (hevcgb.GetWord(1)) {
+                    // default_display_window_flag
+                    hevcgb.GetUE(); // def_disp_win_left_offset
+                    hevcgb.GetUE(); // def_disp_win_right_offset
+                    hevcgb.GetUE(); // def_disp_win_top_offset
+                    hevcgb.GetUE(); // def_disp_win_bottom_offset
+                }
+
+                if (hevcgb.GetWord(1)) {
+                    // vui_timing_info_present_flag
+                    var num_units_in_tick = hevcgb.GetUE();
+                    var time_scale = hevcgb.GetUE();
+
+                    fps_fixed = true;
+                    fps_num = time_scale;
+                    fps_den = num_units_in_tick * 2;
+                    fps = fps_num / fps_den;
+
+                    if (hevcgb.GetWord(1)) {
+                        var num_ticks_poc_diff_one_minus1 = hevcgb.GetUE();
+                    }
+
+                    // if (get_bits1(gb)) // vui_hrd_parameters_present_flag
+                    //     skip_hrd_parameters(gb, 1, max_sub_layers_minus1);
+                }
+            }
+
+            return {
+                //profile_string: profile_string,  // baseline, high, high10, ...
+                //level_string: level_string,  // 3, 3.1, 4, 4.1, 5, 5.1, ...
+                bit_depth: bit_depth_luma_minus8, // 8bit, 10bit, ...
+                //ref_frames: ref_frames,
+                chroma_format: chroma_format_idc, // 4:2:0, 4:2:2, ...
+                chroma_format_string: SPSParser.getHevcChromaFormatString(chroma_format_idc),
+
+                frame_rate: {
+                    fixed: fps_fixed,
+                    fps: fps,
+                    fps_den: fps_den,
+                    fps_num: fps_num
+                },
+
+                sar_ratio: {
+                    width: width,
+                    height: height
+                },
+
+                codec_size: {
+                    width: width,
+                    height: height
+                },
+
+                present_size: {
+                    width: width,
+                    height: height
+                }
+            };
         }
     }, {
         key: 'parseSPS',
@@ -5828,7 +6409,7 @@ var SPSParser = function () {
                 gb.readSEG(); // offset_for_non_ref_pic
                 gb.readSEG(); // offset_for_top_to_bottom_field
                 var num_ref_frames_in_pic_order_cnt_cycle = gb.readUEG();
-                for (var _i = 0; _i < num_ref_frames_in_pic_order_cnt_cycle; _i++) {
+                for (var _i5 = 0; _i5 < num_ref_frames_in_pic_order_cnt_cycle; _i5++) {
                     gb.readSEG(); // offset_for_ref_frame
                 }
             }
@@ -5943,7 +6524,7 @@ var SPSParser = function () {
                 level_string: level_string, // 3, 3.1, 4, 4.1, 5, 5.1, ...
                 bit_depth: bit_depth, // 8bit, 10bit, ...
                 ref_frames: ref_frames,
-                chroma_format: chroma_format, // 4:2:0, 4:2:2, ...
+                chroma_format: SPSParser.getHevcChromaFormatUnit(chroma_format), // 4:2:0, 4:2:2, ...
                 chroma_format_string: SPSParser.getChromaFormatString(chroma_format),
 
                 frame_rate: {
@@ -6005,6 +6586,23 @@ var SPSParser = function () {
                     return 'Unknown';
             }
         }
+
+        /*
+        static getHevcProfileString(profile_idc)
+        {
+            switch(profile_idc)
+            {
+                case :
+                    return "Main";
+                case :
+                    return "Main10";
+                case :
+                    return "Main Still Picture";
+                default:
+                    return 'Unknown';
+            }
+        }*/
+
     }, {
         key: 'getLevelString',
         value: function getLevelString(level_idc) {
@@ -6024,6 +6622,34 @@ var SPSParser = function () {
                     return 'Unknown';
             }
         }
+    }, {
+        key: 'getHevcChromaFormatString',
+        value: function getHevcChromaFormatString(chroma) {
+            switch (chroma) {
+                case 1:
+                    return '4:2:0';
+                case 2:
+                    return '4:2:2';
+                case 3:
+                    return '4:4:4';
+                default:
+                    return 'Unknown';
+            }
+        }
+    }, {
+        key: 'getHevcChromaFormatUnit',
+        value: function getHevcChromaFormatUnit(chroma) {
+            switch (chroma) {
+                case 1:
+                    return 420;
+                case 2:
+                    return 422;
+                case 3:
+                    return 444;
+                default:
+                    return 0;
+            }
+        }
     }]);
 
     return SPSParser;
@@ -6031,7 +6657,98 @@ var SPSParser = function () {
 
 exports.default = SPSParser;
 
-},{"./exp-golomb.js":17}],20:[function(_dereq_,module,exports){
+},{"./exp-golomb.js":17,"./hevc-golomb.js":19}],21:[function(_dereq_,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _hevcGolomb = _dereq_('./hevc-golomb.js');
+
+var _hevcGolomb2 = _interopRequireDefault(_hevcGolomb);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var VPSParser = function () {
+    function VPSParser() {
+        _classCallCheck(this, VPSParser);
+    }
+
+    _createClass(VPSParser, null, [{
+        key: 'parseHevcVPS',
+        value: function parseHevcVPS(uint8array) {
+            var hevcgb = new _hevcGolomb2.default(uint8array, uint8array.byteLength);
+            var vps_id = hevcgb.GetWord(4);
+
+            hevcgb.GetWord(2); //vps_reserved_three_2bits
+
+            var vps_max_layers = hevcgb.GetWord(6) + 1;
+            var vps_max_sub_layers = hevcgb.GetWord(3) + 1;
+            if (vps_max_sub_layers > 7) {
+                return false;
+            }
+            var vps_temporal_id_nesting_flag = hevcgb.GetWord(1);
+
+            hevcgb.GetWord(16); // vps_reserved_ffff_16bits
+
+            var ptl_profile_space = hevcgb.GetWord(2);
+            var ptl_tier_flag = hevcgb.GetWord(1);
+            var ptl_profile_idc = hevcgb.GetWord(5);
+            hevcgb.GetWord(32);
+            hevcgb.GetWord(1); // 
+            hevcgb.GetWord(1); // 
+            hevcgb.GetWord(1); // 
+            hevcgb.GetWord(1); // 
+            hevcgb.GetWord(44); // 
+            var level = hevcgb.GetWord(8); // general_level_idc
+
+            var sub_layer_profile_present_flag = new Array();
+            var sub_layer_level_present_flag = new Array();
+            for (var i = 0; i < vps_max_sub_layers - 1; i++) {
+                sub_layer_profile_present_flag[i] = hevcgb.GetWord(1);
+                sub_layer_level_present_flag[i] = hevcgb.GetWord(1);
+            }
+
+            if (vps_max_sub_layers - 1 > 0 && vps_max_sub_layers - 1 < 8) {
+                for (var _i = vps_max_sub_layers - 1; _i < 8; _i++) {
+                    hevcgb.GetWord(2);
+                }
+            }
+
+            if (vps_max_sub_layers - 1 > 0 && vps_max_sub_layers - 1 < 8) {
+                for (var _i2 = vps_max_sub_layers - 1; _i2 < 8; _i2++) {
+                    if (sub_layer_profile_present_flag[_i2] && hevcgb.GetLeft() >= 2 + 1 + 5 + 32 + 4 + 16 + 16 + 12) {
+                        hevcgb.GetWord(2);
+                        hevcgb.GetWord(1);
+                        hevcgb.GetWord(5);
+                        hevcgb.GetWord(32);
+                        hevcgb.GetWord(1); // 
+                        hevcgb.GetWord(1); // 
+                        hevcgb.GetWord(1); // 
+                        hevcgb.GetWord(1); // 
+                        hevcgb.GetWord(44); // 
+                    }
+                    if (sub_layer_level_present_flag[_i2] && hevcgb.GetLeft() >= 8) {
+                        hevcgb.GetWord(8); // general_level_idc
+                    }
+                }
+            }
+
+            var vps_sub_layer_ordering_info_present_flag = hevcgb.GetWord(1);
+        }
+    }]);
+
+    return VPSParser;
+}();
+
+exports.default = VPSParser;
+
+},{"./hevc-golomb.js":19}],22:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6144,13 +6861,13 @@ Object.defineProperty(flvjs, 'version', {
     enumerable: true,
     get: function get() {
         // replaced by browserify-versionify transform
-        return '2.0.0';
+        return '2.0.1';
     }
 });
 
 exports.default = flvjs;
 
-},{"./core/features.js":6,"./io/loader.js":24,"./player/flv-player.js":32,"./player/native-player.js":33,"./player/player-errors.js":34,"./player/player-events.js":35,"./utils/exception.js":40,"./utils/logging-control.js":42,"./utils/polyfill.js":43}],21:[function(_dereq_,module,exports){
+},{"./core/features.js":6,"./io/loader.js":26,"./player/flv-player.js":34,"./player/native-player.js":35,"./player/player-errors.js":36,"./player/player-events.js":37,"./utils/exception.js":42,"./utils/logging-control.js":44,"./utils/polyfill.js":45}],23:[function(_dereq_,module,exports){
 'use strict';
 
 // entry/index file
@@ -6158,7 +6875,7 @@ exports.default = flvjs;
 // make it compatible with browserify's umd wrapper
 module.exports = _dereq_('./flv.js').default;
 
-},{"./flv.js":20}],22:[function(_dereq_,module,exports){
+},{"./flv.js":22}],24:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6344,6 +7061,7 @@ var FetchStreamLoader = function (_BaseLoader) {
                     return _this2._pump.call(_this2, res.body.getReader());
                 } else {
                     _this2._status = _loader.LoaderStatus.kError;
+                    _this2.sendError();
                     if (_this2._onError) {
                         _this2._onError(_loader.LoaderErrors.HTTP_STATUS_CODE_INVALID, { code: res.status, msg: res.statusText });
                     } else {
@@ -6363,9 +7081,13 @@ var FetchStreamLoader = function (_BaseLoader) {
         key: 'abort',
         value: function abort() {
             this._requestAbort = true;
-
+        }
+    }, {
+        key: 'sendError',
+        value: function sendError() {
+            this.abort();
             self.postMessage({
-                action: 'disconnect'
+                msg: 'disconnect'
             });
         }
     }, {
@@ -6435,6 +7157,8 @@ var FetchStreamLoader = function (_BaseLoader) {
                     info = { code: e.code, msg: e.message };
                 }
 
+                _this3.sendError();
+
                 if (_this3._onError) {
                     _this3._onError(type, info);
                 } else {
@@ -6449,7 +7173,7 @@ var FetchStreamLoader = function (_BaseLoader) {
 
 exports.default = FetchStreamLoader;
 
-},{"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],23:[function(_dereq_,module,exports){
+},{"../utils/browser.js":41,"../utils/exception.js":42,"../utils/logger.js":43,"./loader.js":26}],25:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7187,7 +7911,7 @@ var IOController = function () {
 
 exports.default = IOController;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./fetch-stream-loader.js":22,"./loader.js":24,"./param-seek-handler.js":25,"./range-seek-handler.js":26,"./speed-sampler.js":27,"./websocket-loader.js":28,"./xhr-moz-chunked-loader.js":29,"./xhr-msstream-loader.js":30,"./xhr-range-loader.js":31}],24:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42,"../utils/logger.js":43,"./fetch-stream-loader.js":24,"./loader.js":26,"./param-seek-handler.js":27,"./range-seek-handler.js":28,"./speed-sampler.js":29,"./websocket-loader.js":30,"./xhr-moz-chunked-loader.js":31,"./xhr-msstream-loader.js":32,"./xhr-range-loader.js":33}],26:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7345,7 +8069,7 @@ var BaseLoader = exports.BaseLoader = function () {
     return BaseLoader;
 }();
 
-},{"../utils/exception.js":40}],25:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42}],27:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7448,7 +8172,7 @@ var ParamSeekHandler = function () {
 
 exports.default = ParamSeekHandler;
 
-},{}],26:[function(_dereq_,module,exports){
+},{}],28:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7518,7 +8242,7 @@ var RangeSeekHandler = function () {
 
 exports.default = RangeSeekHandler;
 
-},{}],27:[function(_dereq_,module,exports){
+},{}],29:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7634,7 +8358,7 @@ var SpeedSampler = function () {
 
 exports.default = SpeedSampler;
 
-},{}],28:[function(_dereq_,module,exports){
+},{}],30:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7829,7 +8553,7 @@ var WebSocketLoader = function (_BaseLoader) {
 
 exports.default = WebSocketLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],29:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42,"../utils/logger.js":43,"./loader.js":26}],31:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8083,7 +8807,7 @@ var MozChunkedLoader = function (_BaseLoader) {
 
 exports.default = MozChunkedLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],30:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42,"../utils/logger.js":43,"./loader.js":26}],32:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8442,7 +9166,7 @@ var MSStreamLoader = function (_BaseLoader) {
 
 exports.default = MSStreamLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],31:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42,"../utils/logger.js":43,"./loader.js":26}],33:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8858,7 +9582,7 @@ var RangeLoader = function (_BaseLoader) {
 
 exports.default = RangeLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24,"./speed-sampler.js":27}],32:[function(_dereq_,module,exports){
+},{"../utils/exception.js":42,"../utils/logger.js":43,"./loader.js":26,"./speed-sampler.js":29}],34:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9055,10 +9779,6 @@ var FlvPlayer = function () {
                 }
             });
             this._msectl.on(_mseEvents2.default.ERROR, function (info) {
-                window.postMessage({
-                    action: 'refresh',
-                    mediaElement: mediaElement
-                }, '*');
                 _this2._emitter.emit(_playerEvents2.default.ERROR, _playerErrors.ErrorTypes.MEDIA_ERROR, _playerErrors.ErrorDetails.MEDIA_MSE_ERROR, info);
             });
 
@@ -9548,7 +10268,7 @@ var FlvPlayer = function () {
 
 exports.default = FlvPlayer;
 
-},{"../config.js":5,"../core/mse-controller.js":9,"../core/mse-events.js":10,"../core/transmuxer.js":11,"../core/transmuxing-events.js":13,"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./player-errors.js":34,"./player-events.js":35,"events":2}],33:[function(_dereq_,module,exports){
+},{"../config.js":5,"../core/mse-controller.js":9,"../core/mse-events.js":10,"../core/transmuxer.js":11,"../core/transmuxing-events.js":13,"../utils/browser.js":41,"../utils/exception.js":42,"../utils/logger.js":43,"./player-errors.js":36,"./player-events.js":37,"events":2}],35:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9846,7 +10566,7 @@ var NativePlayer = function () {
 
 exports.default = NativePlayer;
 
-},{"../config.js":5,"../utils/exception.js":40,"./player-events.js":35,"events":2}],34:[function(_dereq_,module,exports){
+},{"../config.js":5,"../utils/exception.js":42,"./player-events.js":37,"events":2}],36:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9899,7 +10619,7 @@ var ErrorDetails = exports.ErrorDetails = {
     MEDIA_CODEC_UNSUPPORTED: _demuxErrors2.default.CODEC_UNSUPPORTED
 };
 
-},{"../demux/demux-errors.js":16,"../io/loader.js":24}],35:[function(_dereq_,module,exports){
+},{"../demux/demux-errors.js":16,"../io/loader.js":26}],37:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9935,7 +10655,7 @@ var PlayerEvents = {
 
 exports.default = PlayerEvents;
 
-},{}],36:[function(_dereq_,module,exports){
+},{}],38:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10010,7 +10730,7 @@ var AAC = function () {
 
 exports.default = AAC;
 
-},{}],37:[function(_dereq_,module,exports){
+},{}],39:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10058,7 +10778,9 @@ var MP4 = function () {
                 stco: [], stsc: [], stsd: [], stsz: [],
                 stts: [], tfdt: [], tfhd: [], traf: [],
                 trak: [], trun: [], trex: [], tkhd: [],
-                vmhd: [], smhd: [], '.mp3': []
+                vmhd: [], smhd: [], hvcC: [], hvc1: [],
+                fiel: [], pasp: [],
+                '.mp3': []
             };
 
             for (var name in MP4.types) {
@@ -10069,11 +10791,21 @@ var MP4 = function () {
 
             var constants = MP4.constants = {};
 
+            constants.FIEL = new Uint8Array([0x01, 0x00]);
+
+            constants.PASP = new Uint8Array([0x20, 0x20, 0x02, 0x80, 0x20, 0x20, 0x02, 0x7f]);
+
             constants.FTYP = new Uint8Array([0x69, 0x73, 0x6F, 0x6D, // major_brand: isom
             0x0, 0x0, 0x0, 0x1, // minor_version: 0x01
             0x69, 0x73, 0x6F, 0x6D, // isom
             0x61, 0x76, 0x63, 0x31 // avc1
             ]);
+
+            constants.HVCFTYP = new Uint8Array([0x69, 0x73, 0x6f, 0x6d, // major_brand: isom
+            0x0, 0x0, 0x02, 0x0, // minor_version: 0x01
+            0x69, 0x73, 0x6F, 0x6D, // isom
+            0x69, 0x73, 0x6F, 0x32, // iso2
+            0x6d, 0x70, 0x34, 0x31]);
 
             constants.STSD_PREFIX = new Uint8Array([0x00, 0x00, 0x00, 0x00, // version(0) + flags
             0x00, 0x00, 0x00, 0x01 // entry_count
@@ -10160,7 +10892,15 @@ var MP4 = function () {
     }, {
         key: 'generateInitSegment',
         value: function generateInitSegment(meta) {
-            var ftyp = MP4.box(MP4.types.ftyp, MP4.constants.FTYP);
+            var ftyp = null;
+            if (meta.propty == 'avc') {
+                ftyp = MP4.box(MP4.types.ftyp, MP4.constants.FTYP);
+            } else if (meta.propty == 'hevc') {
+                ftyp = MP4.box(MP4.types.ftyp, MP4.constants.HVCFTYP);
+            } else {
+                return false;
+            }
+
             var moov = MP4.moov(meta);
 
             var result = new Uint8Array(ftyp.byteLength + moov.byteLength);
@@ -10219,7 +10959,7 @@ var MP4 = function () {
             var width = meta.presentWidth,
                 height = meta.presentHeight;
 
-            return MP4.box(MP4.types.tkhd, new Uint8Array([0x00, 0x00, 0x00, 0x07, // version(0) + flags
+            return MP4.box(MP4.types.tkhd, new Uint8Array([0x00, 0x00, 0x00, 0x01, // version(0) + flags
             0x00, 0x00, 0x00, 0x00, // creation_time
             0x00, 0x00, 0x00, 0x00, // modification_time
             trackId >>> 24 & 0xFF, // track_ID: 4 bytes
@@ -10323,7 +11063,11 @@ var MP4 = function () {
                 // else: aac -> mp4a
                 return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.mp4a(meta));
             } else {
-                return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.avc1(meta));
+                if (meta.propty == 'avc') {
+                    return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.avc1(meta));
+                } else if (meta.propty == 'hevc') {
+                    return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.hvc1(meta));
+                } else ;
             }
         }
     }, {
@@ -10384,6 +11128,30 @@ var MP4 = function () {
             ].concat([configSize]).concat(config).concat([0x06, 0x01, 0x02 // GASpecificConfig
             ]));
             return MP4.box(MP4.types.esds, data);
+        }
+    }, {
+        key: 'hvc1',
+        value: function hvc1(meta) {
+            var hvcc = meta.hvcc;
+            var width = meta.codecWidth,
+                height = meta.codecHeight;
+
+            var data = new Uint8Array([0x00, 0x00, 0x00, 0x00, // reserved(4)
+            0x00, 0x00, 0x00, 0x01, // reserved(2) + data_reference_index(2)
+            0x00, 0x00, 0x00, 0x00, // pre_defined(2) + reserved(2)
+            0x00, 0x00, 0x00, 0x00, // pre_defined: 3 * 4 bytes
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, width >>> 8 & 0xFF, // width: 2 bytes
+            width & 0xFF, height >>> 8 & 0xFF, // height: 2 bytes
+            height & 0xFF, 0x00, 0x48, 0x00, 0x00, // horizresolution: 4 bytes
+            0x00, 0x48, 0x00, 0x00, // vertresolution: 4 bytes
+            0x00, 0x00, 0x00, 0x00, // reserved: 4 bytes
+            0x00, 0x01, // frame_count
+            0x00, // strlen
+            0x00, 0x00, 0x00, 0x00, // compressorname: 32 bytes
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, // depth
+            0xFF, 0xFF // pre_defined = -1
+            ]);
+            return MP4.box(MP4.types.hvc1, data, MP4.box(MP4.types.hvcC, hvcc), MP4.box(MP4.types.fiel, MP4.constants.FIEL), MP4.box(MP4.types.pasp, MP4.constants.PASP));
         }
     }, {
         key: 'avc1',
@@ -10533,7 +11301,7 @@ MP4.init();
 
 exports.default = MP4;
 
-},{}],38:[function(_dereq_,module,exports){
+},{}],40:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11309,7 +12077,7 @@ var MP4Remuxer = function () {
 
 exports.default = MP4Remuxer;
 
-},{"../core/media-segment-info.js":8,"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./aac-silent.js":36,"./mp4-generator.js":37}],39:[function(_dereq_,module,exports){
+},{"../core/media-segment-info.js":8,"../utils/browser.js":41,"../utils/exception.js":42,"../utils/logger.js":43,"./aac-silent.js":38,"./mp4-generator.js":39}],41:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11423,7 +12191,7 @@ detect();
 
 exports.default = Browser;
 
-},{}],40:[function(_dereq_,module,exports){
+},{}],42:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11540,7 +12308,7 @@ var NotImplementedException = exports.NotImplementedException = function (_Runti
     return NotImplementedException;
 }(RuntimeException);
 
-},{}],41:[function(_dereq_,module,exports){
+},{}],43:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11700,7 +12468,7 @@ Log.emitter = new _events2.default();
 
 exports.default = Log;
 
-},{"events":2}],42:[function(_dereq_,module,exports){
+},{"events":2}],44:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11891,7 +12659,7 @@ LoggingControl.emitter = new _events2.default();
 
 exports.default = LoggingControl;
 
-},{"./logger.js":41,"events":2}],43:[function(_dereq_,module,exports){
+},{"./logger.js":43,"events":2}],45:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11968,7 +12736,7 @@ Polyfill.install();
 
 exports.default = Polyfill;
 
-},{"es6-promise":1}],44:[function(_dereq_,module,exports){
+},{"es6-promise":1}],46:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12057,7 +12825,7 @@ function decodeUTF8(uint8array) {
 
 exports.default = decodeUTF8;
 
-},{}]},{},[21])(21)
+},{}]},{},[23])(23)
 });
 
 //# sourceMappingURL=flv.js.map
