@@ -30,9 +30,7 @@ class MP4 {
             stco: [], stsc: [], stsd: [], stsz: [],
             stts: [], tfdt: [], tfhd: [], traf: [],
             trak: [], trun: [], trex: [], tkhd: [],
-            vmhd: [], smhd: [], hvcC: [], hvc1: [],
-            fiel: [], pasp: [],
-            '.mp3': []
+            vmhd: [], smhd: [], '.mp3': []
         };
 
         for (let name in MP4.types) {
@@ -48,30 +46,11 @@ class MP4 {
 
         let constants = MP4.constants = {};
 
-        constants.FIEL = new Uint8Array([
-            0x01, 0x00
-        ]);
-
-        constants.PASP = new Uint8Array([
-            0x20, 0x20, 0x02, 0x80,
-            0x20, 0x20, 0x02, 0x7f
-        ]);
-          
-
         constants.FTYP = new Uint8Array([
             0x69, 0x73, 0x6F, 0x6D,  // major_brand: isom
             0x0,  0x0,  0x0,  0x1,   // minor_version: 0x01
             0x69, 0x73, 0x6F, 0x6D,  // isom
             0x61, 0x76, 0x63, 0x31   // avc1
-        ]);
-
-        constants.HVCFTYP = new Uint8Array([
-            0x69, 0x73, 0x6f, 0x6d,  // major_brand: isom
-            0x0,  0x0,  0x02,  0x0,   // minor_version: 0x01
-            0x69, 0x73, 0x6F, 0x6D,  // isom
-            0x69, 0x73, 0x6F, 0x32,  // iso2
-            0x6d, 0x70, 0x34, 0x31,  // mp41
-            //0x68, 0x76, 0x63, 0x31   // hvc1
         ]);
 
         constants.STSD_PREFIX = new Uint8Array([
@@ -169,20 +148,7 @@ class MP4 {
 
     // emit ftyp & moov
     static generateInitSegment(meta) {
-        let ftyp = null;
-        if (meta.propty == 'avc')
-        {
-            ftyp = MP4.box(MP4.types.ftyp, MP4.constants.FTYP);
-        }
-        else if (meta.propty == 'hevc')
-        {
-            ftyp = MP4.box(MP4.types.ftyp, MP4.constants.HVCFTYP);
-        }
-        else
-        {
-            return false;
-        }
-        
+        let ftyp = MP4.box(MP4.types.ftyp, MP4.constants.FTYP);
         let moov = MP4.moov(meta);
 
         let result = new Uint8Array(ftyp.byteLength + moov.byteLength);
@@ -247,7 +213,7 @@ class MP4 {
         let width = meta.presentWidth, height = meta.presentHeight;
 
         return MP4.box(MP4.types.tkhd, new Uint8Array([
-            0x00, 0x00, 0x00, 0x01,  // version(0) + flags
+            0x00, 0x00, 0x00, 0x07,  // version(0) + flags
             0x00, 0x00, 0x00, 0x00,  // creation_time
             0x00, 0x00, 0x00, 0x00,  // modification_time
             (trackId >>> 24) & 0xFF,  // track_ID: 4 bytes
@@ -266,7 +232,7 @@ class MP4 {
             0x00, 0x01, 0x00, 0x00,  // ----begin composition matrix----
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 
+            0x00, 0x00, 0x00, 0x00,
             0x00, 0x01, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00,
@@ -358,16 +324,7 @@ class MP4 {
             // else: aac -> mp4a
             return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.mp4a(meta));
         } else {
-            if (meta.propty == 'avc')
-            {
-                return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.avc1(meta));
-            }
-            else if (meta.propty == 'hevc')
-            {
-                return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.hvc1(meta));
-            }
-            else;
-            
+            return MP4.box(MP4.types.stsd, MP4.constants.STSD_PREFIX, MP4.avc1(meta));
         }
     }
 
@@ -439,44 +396,6 @@ class MP4 {
             0x06, 0x01, 0x02         // GASpecificConfig
         ]));
         return MP4.box(MP4.types.esds, data);
-    }
-
-    static hvc1(meta)
-    {
-        let hvcc = meta.hvcc;
-        let width = meta.codecWidth, height = meta.codecHeight;
-
-        let data = new Uint8Array([
-            0x00, 0x00, 0x00, 0x00,  // reserved(4)
-            0x00, 0x00, 0x00, 0x01,  // reserved(2) + data_reference_index(2)
-            0x00, 0x00, 0x00, 0x00,  // pre_defined(2) + reserved(2)
-            0x00, 0x00, 0x00, 0x00,  // pre_defined: 3 * 4 bytes
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            (width >>> 8) & 0xFF,    // width: 2 bytes
-            (width) & 0xFF,
-            (height >>> 8) & 0xFF,   // height: 2 bytes
-            (height) & 0xFF,
-            0x00, 0x48, 0x00, 0x00,  // horizresolution: 4 bytes
-            0x00, 0x48, 0x00, 0x00,  // vertresolution: 4 bytes
-            0x00, 0x00, 0x00, 0x00,  // reserved: 4 bytes
-            0x00, 0x01,              // frame_count
-            0x00,                    // strlen
-            0x00, 0x00, 0x00, 0x00,  // compressorname: 32 bytes
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00,
-            0x00, 0x18,              // depth
-            0xFF, 0xFF               // pre_defined = -1
-        ]);
-        return MP4.box(MP4.types.hvc1, data, 
-            MP4.box(MP4.types.hvcC, hvcc), 
-            MP4.box(MP4.types.fiel, MP4.constants.FIEL), 
-            MP4.box(MP4.types.pasp, MP4.constants.PASP));
     }
 
     static avc1(meta) {

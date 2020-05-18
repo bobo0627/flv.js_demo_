@@ -19,11 +19,9 @@
 import Log from '../utils/logger.js';
 import AMF from './amf-parser.js';
 import SPSParser from './sps-parser.js';
-import VPSParser from './vps-parser.js';
 import DemuxErrors from './demux-errors.js';
 import MediaInfo from '../core/media-info.js';
 import {IllegalStateException} from '../utils/exception.js';
-import NALBitstream from './hevc-golomb.js';
 
 function Swap16(src) {
     return (((src >>> 8) & 0xFF) |
@@ -358,13 +356,10 @@ class FLVDemuxer {
         }
 
         // dispatch parsed frames to consumer (typically, the remuxer)
-        // if (this._isInitialMetadataDispatched()) {
-        //     if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
-        //         this._onDataAvailable(this._audioTrack, this._videoTrack);
-        //     }
-        // }
-        if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
-            this._onDataAvailable(this._audioTrack, this._videoTrack);
+        if (this._isInitialMetadataDispatched()) {
+            if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+                this._onDataAvailable(this._audioTrack, this._videoTrack);
+            }
         }
 
         return offset;  // consumed bytes, just equals latest offset index
@@ -842,17 +837,15 @@ class FLVDemuxer {
         let frameType = (spec & 240) >>> 4;
         let codecId = spec & 15;
 
-        if ((codecId !== 7) && (codecId !== 12))
-        {
+        if (codecId !== 7) {
             this._onError(DemuxErrors.CODEC_UNSUPPORTED, `Flv: Unsupported codec in video frame: ${codecId}`);
             return;
         }
 
-        this._parseAVCVideoPacket(codecId, arrayBuffer, dataOffset + 1, dataSize - 1, tagTimestamp, tagPosition, frameType);
+        this._parseAVCVideoPacket(arrayBuffer, dataOffset + 1, dataSize - 1, tagTimestamp, tagPosition, frameType);
     }
 
-    _parseAVCVideoPacket(codecId, arrayBuffer, dataOffset, dataSize, tagTimestamp, tagPosition, frameType) {
-        
+    _parseAVCVideoPacket(arrayBuffer, dataOffset, dataSize, tagTimestamp, tagPosition, frameType) {
         if (dataSize < 4) {
             Log.w(this.TAG, 'Flv: Invalid AVC packet, missing AVCPacketType or/and CompositionTime');
             return;
@@ -865,205 +858,16 @@ class FLVDemuxer {
         let cts_unsigned = v.getUint32(0, !le) & 0x00FFFFFF;
         let cts = (cts_unsigned << 8) >> 8;  // convert to 24-bit signed int
 
-        if (codecId == 7)
-        {
-            if (packetType === 0) {  // AVCDecoderConfigurationRecord
-                this._parseAVCDecoderConfigurationRecord(arrayBuffer, dataOffset + 4, dataSize - 4);
-            } else if (packetType === 1) {  // One or more Nalus
-                this._parseAVCVideoData(arrayBuffer, dataOffset + 4, dataSize - 4, tagTimestamp, tagPosition, frameType, cts);
-            } else if (packetType === 2) {
-                // empty, AVC end of sequence
-            } else {
-                this._onError(DemuxErrors.FORMAT_ERROR, `Flv: Invalid video packet type ${packetType}`);
-                return;
-            }
-        }
-        else
-        {
-            if (packetType === 0) {  // AVCDecoderConfigurationRecord
-                this._parseHEVCDecoderConfigurationRecord(arrayBuffer, dataOffset + 4, dataSize - 4);
-            } else if (packetType === 1) {  // One or more Nalus
-                this._parseAVCVideoData(arrayBuffer, dataOffset + 4, dataSize - 4, tagTimestamp, tagPosition, frameType, cts);
-            } else if (packetType === 2) {
-                // empty, AVC end of sequence
-            } else {
-                this._onError(DemuxErrors.FORMAT_ERROR, `Flv: Invalid video packet type ${packetType}`);
-                return;
-            }
-        }
-        
-    }
-
-
-    _parseHEVCDecoderConfigurationRecord(arrayBuffer, dataOffset, dataSize)
-    {
-        if (dataSize < 22) {
-            Log.w(this.TAG, 'Flv: Invalid _parseHEVCDecoderConfigurationRecord, lack of data!');
+        if (packetType === 0) {  // AVCDecoderConfigurationRecord
+            this._parseAVCDecoderConfigurationRecord(arrayBuffer, dataOffset + 4, dataSize - 4);
+        } else if (packetType === 1) {  // One or more Nalus
+            this._parseAVCVideoData(arrayBuffer, dataOffset + 4, dataSize - 4, tagTimestamp, tagPosition, frameType, cts);
+        } else if (packetType === 2) {
+            // empty, AVC end of sequence
+        } else {
+            this._onError(DemuxErrors.FORMAT_ERROR, `Flv: Invalid video packet type ${packetType}`);
             return;
         }
-
-        let meta = this._videoMetadata;
-        let track = this._videoTrack;
-        let le = this._littleEndian;
-
-        if (!meta) {
-            if (this._hasVideo === false && this._hasVideoFlagOverrided === false) {
-                this._hasVideo = true;
-                this._mediaInfo.hasVideo = true;
-            }
-
-            meta = this._videoMetadata = {};
-            meta.type = 'video';
-            meta.id = track.id;
-            meta.timescale = this._timescale;
-            meta.duration = this._duration;
-            meta.propty = 'hevc';
-        } else {
-            if (typeof meta.avcc !== 'undefined') {
-                Log.w(this.TAG, 'Found another AVCDecoderConfigurationRecord!');
-            }
-        }
-
-        //let offset = 0;
-        let v = new DataView(arrayBuffer, dataOffset, dataSize);
-        let uint8array = new Uint8Array(arrayBuffer, dataOffset, dataSize);
-        let bs = new NALBitstream(uint8array, uint8array.byteLength);
-        let version = v.getUint8(0);
-        //offset = offset + 1;
-        let general = v.getUint8(1);
-        let general_profile_space = bs.GetWord(2);
-        let general_tier_flag = bs.GetWord(1);
-        let general_profile_idc = bs.GetWord(5);
-        //offset = offset + 1;
-
-        let general_profile_compatibility_flags = bs.GetWord(32);
-        let general_constraint_indicator_flags = bs.GetWord(48);
-        let general_level_idc = bs.GetWord(8);
-        bs.GetWord(4);
-        let min_spatial_segmentation_idc = bs.GetWord(12);
-        bs.GetWord(6);
-        let parallelismType = bs.GetWord(2);
-        bs.GetWord(6);
-        let chromaFormat = bs.GetWord(2);
-
-        bs.GetWord(5);
-        let bitDepthLumaMinus8 = bs.GetWord(3);
-        let bitDepthChromaMinus8 = bs.GetWord(3);
-        let avgFrameRate = bs.GetWord(16);
-        let constantFrameRate = bs.GetWord(2);
-        let numTemporalLayers = bs.GetWord(3);
-        let temporalIdNested = bs.GetWord(1);
-
-        let lengthSizeMinusOne = bs.GetWord(2);
-
-        let numOfArrays = v.getUint8(22);
-        //offset = offset + 1;
-        let offset = 23;
-
-        for (let i = 0; i < numOfArrays; i++)
-        {
-           // let array_completeness = v.getUint8(offset)&0x80;
-           // offset = offset + 1;
-            let NAL_unit_type = v.getUint8(offset) & 0x3f;
-            offset = offset + 1;
-
-            let numNalus = v.getUint16(offset, !le);
-            offset = offset + 2;
-            for (let j = 0; j < numNalus; j++)
-            {
-                let nalUnitLength = v.getUint16(offset, !le);
-                offset = offset + 2;
-                let data = new DataView(arrayBuffer, dataOffset + offset, nalUnitLength);
-                let dataUint8 = new Uint8Array(arrayBuffer, dataOffset + offset, nalUnitLength);
-                offset = offset + nalUnitLength;
-
-                
-                let type = data.getUint8(0);
-                if (type == 0x42)
-                {//sps
-                    let config = SPSParser.parseHevcSPS(dataUint8);
-
-
-
-
-
-
-                    meta.codecWidth = config.codec_size.width;
-                    meta.codecHeight = config.codec_size.height;
-                    meta.presentWidth = config.present_size.width;
-                    meta.presentHeight = config.present_size.height;
-
-                    meta.profile = general_profile_idc;//config.profile_string;
-                    meta.level = general_level_idc;//config.level_string;
-                    meta.bitDepth = bitDepthLumaMinus8;//config.bit_depth;
-                    meta.chromaFormat = chromaFormat;//config.chroma_format;
-                    meta.sarRatio = config.sar_ratio;
-
-                    if (config.frame_rate.fixed === false ||
-                        config.frame_rate.fps_num === 0 ||
-                        config.frame_rate.fps_den === 0) {
-                        meta.frameRate = this._referenceFrameRate;
-                    }
-
-                    let codecArray = dataUint8.subarray(1, 4);
-                }
-                else if (type == 0x44)
-                {//pps
-                    
-                }
-                else if (type == 0x40)
-                {//vps
-                    let mainTier = data.getUint8(6);
-
-                    let L = data.getUint8(20); //L
-                    let version = data.getUint8(12); //
-                    meta.codec = 'hev1.' + data.getUint8(6).toString() + '.6.L' + data.getUint8(20).toString() + '.' + data.getUint8(12).toString(16);
-                }
-                else if (type == 0x4E)
-                {//SEI
-
-                }
-                else if (type == 0x26)
-                {//IDR
-
-                }
-            }
-        }
-
-        let mi = this._mediaInfo;
-        mi.width = meta.codecWidth;
-        mi.height = meta.codecHeight;
-        mi.fps = 25;//meta.frameRate.fps;
-        mi.sarNum = meta.sarRatio.width;
-        mi.sarDen = meta.sarRatio.height;
-        mi.videoCodec = meta.codec;
-
-        if (mi.hasAudio) {
-            if (mi.audioCodec != null) {
-                mi.mimeType = 'video/x-flv; codecs="' + mi.videoCodec + ',' + mi.audioCodec + '"';
-            }
-        } else {
-            mi.mimeType = 'video/x-flv; codecs="' + mi.videoCodec + '"';
-        }
-        if (mi.isComplete()) {
-            this._onMediaInfo(mi);
-        }
-
-        meta.hvcc = new Uint8Array(dataSize);
-        meta.hvcc.set(new Uint8Array(arrayBuffer, dataOffset, dataSize), 0);
-        Log.v(this.TAG, 'Parsed AVCDecoderConfigurationRecord');
-
-        if (this._isInitialMetadataDispatched()) {
-            // flush parsed frames
-            if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
-                this._onDataAvailable(this._audioTrack, this._videoTrack);
-            }
-        } else {
-            this._videoInitialMetadataDispatched = true;
-        }
-        // notify new metadata
-        this._dispatch = false;
-        this._onTrackMetadata('video', meta);
     }
 
     _parseAVCDecoderConfigurationRecord(arrayBuffer, dataOffset, dataSize) {
@@ -1088,7 +892,6 @@ class FLVDemuxer {
             meta.id = track.id;
             meta.timescale = this._timescale;
             meta.duration = this._duration;
-            meta.propty = 'avc';
         } else {
             if (typeof meta.avcc !== 'undefined') {
                 Log.w(this.TAG, 'Found another AVCDecoderConfigurationRecord!');

@@ -10,7 +10,7 @@ const INIT = 'init',
 const Util = {
     checkStream(stream) {
         const index = stream.lastIndexOf('.');
-        const suffix = stream.substring(index+1);
+        const suffix = stream.substring(index + 1);
         if(suffix==='flv'){
             return true;
         }else{
@@ -46,13 +46,14 @@ class Player{
                 type: 'flv',
                 url: this.config.stream,
                 hasVideo: true,
-                hasAudio: false,
+                hasAudio: true,
                 isLive: true,
-                cors: true
+                cors: true,
+                withCredentials: false
             },{
                 enableWorker: true,
                 enableStashBuffer: false,
-                stashInitialSize: 120,
+                stashInitialSize: 480,
                 autoCleanupSourceBuffer: true,
                 autoCleanupMaxBackwardDuration: 5,
                 autoCleanupMinBackwardDuration: 3,
@@ -74,9 +75,9 @@ class Player{
         this.pInstance.pause();
     }
     reconnect() {
-        let times = 0;
         const interval = setInterval(() => {
-            console.info(++times+'times reconnect...');
+            console.log(document.getElementById('player').seeking, document.getElementById('player').playbackRate);
+            console.info('times reconnect...');
             fetch(`${this.config.reconnectAPI || BSERURL}/v1/gb/stream/start`, {
                 body: JSON.stringify({
                     appId: this.config.appid,
@@ -99,14 +100,11 @@ class Player{
                 }else{
                     console.error(res.message);
                 }
-                if(times>100 && interval){
-                    clearInterval(interval);
-                }
             })
             .catch(err => {
                 throw new Error(err);
             });
-        }, 2000);
+        }, 10000);
     }
     destory() {
         this.pInstance.pause();
@@ -168,6 +166,7 @@ if(searchs){
 }
 
 window.addEventListener('message', function(event){
+    console.log(event.data);
     if(szPlayer){
         switch(event.data.action) {
             case INIT:  szPlayer.create();

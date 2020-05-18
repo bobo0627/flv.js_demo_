@@ -148,6 +148,10 @@ class FlvPlayer {
             }
         });
         this._msectl.on(MSEEvents.ERROR, (info) => {
+            window.postMessage({
+                action: 'refresh',
+                mediaElement: mediaElement
+            }, '*');
             this._emitter.emit(PlayerEvents.ERROR,
                                ErrorTypes.MEDIA_ERROR,
                                ErrorDetails.MEDIA_MSE_ERROR,

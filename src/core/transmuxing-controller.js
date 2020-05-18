@@ -356,8 +356,9 @@ class TransmuxingController {
         Log.e(this.TAG, `IOException: type = ${type}, code = ${info.code}, msg = ${info.msg}`);
 
         self.postMessage({
-            msg: 'disconnect'
+            action: 'disconnect'
         });
+
 
         this._emitter.emit(TransmuxingEvents.IO_ERROR, type, info);
         this._disableStatisticsReporter();
