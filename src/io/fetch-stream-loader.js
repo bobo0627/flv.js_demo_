@@ -165,7 +165,8 @@ class FetchStreamLoader extends BaseLoader {
         this._requestAbort = true;
 
         self.postMessage({
-            action: 'disconnect'
+            action: 'disconnect',
+            mediaElement: this._config.mediaElement
         });
     }
 

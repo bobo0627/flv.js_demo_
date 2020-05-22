@@ -130,6 +130,7 @@ class FlvPlayer {
 
     attachMediaElement(mediaElement) {
         this._mediaElement = mediaElement;
+        this._config.mediaElement = mediaElement;
         mediaElement.addEventListener('loadedmetadata', this.e.onvLoadedMetadata);
         mediaElement.addEventListener('seeking', this.e.onvSeeking);
         mediaElement.addEventListener('canplay', this.e.onvCanPlay);

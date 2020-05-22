@@ -29,7 +29,7 @@ class Transmuxer {
     constructor(mediaDataSource, config) {
         this.TAG = 'Transmuxer';
         this._emitter = new EventEmitter();
-
+        this._config = config;
         if (config.enableWorker && typeof (Worker) !== 'undefined') {
             try {
                 let work = require('webworkify');
@@ -248,7 +248,10 @@ class Transmuxer {
                 Log.emitter.emit('log', data.type, data.logcat);
                 break;
             case 'disconnect':
-                window.postMessage({action: 'disconnect'}, '*');
+                window.postMessage({
+                    action: 'disconnect',
+                    mediaElement: this._config.mediaElement
+                }, '*');
                 break;
             default:
                 break;

@@ -356,7 +356,8 @@ class TransmuxingController {
         Log.e(this.TAG, `IOException: type = ${type}, code = ${info.code}, msg = ${info.msg}`);
 
         self.postMessage({
-            action: 'disconnect'
+            action: 'disconnect',
+            mediaElement: this._config.mediaElement
         });
 
 
