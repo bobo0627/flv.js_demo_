@@ -6369,8 +6369,8 @@ var FetchStreamLoader = function (_BaseLoader) {
             this._requestAbort = true;
 
             self.postMessage({
-                action: 'disconnect',
-                mediaElement: this._config.mediaElement
+                action: 'disconnect'
+                // mediaElement: this._config.mediaElement
             });
         }
     }, {

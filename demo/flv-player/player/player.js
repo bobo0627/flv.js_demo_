@@ -107,8 +107,8 @@ class Player{
         }, 10000);
     }
     destory() {
-        this.pInstance.pause();
-        this.pInstance.unload();
+        // this.pInstance.pause();
+        // this.pInstance.unload();
         this.pInstance.detachMediaElement();
         this.pInstance.destroy();
         this.pInstance = null;
