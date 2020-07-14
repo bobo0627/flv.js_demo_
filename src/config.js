@@ -17,9 +17,9 @@
  */
 
 export const defaultConfig = {
-    enableWorker: false,
+    enableWorker: true,
     enableStashBuffer: true,
-    stashInitialSize: undefined,
+    stashInitialSize: 384,
 
     isLive: false,
 
@@ -34,7 +34,7 @@ export const defaultConfig = {
 
     statisticsInfoReportInterval: 600,
 
-    fixAudioTimestampGap: true,
+    fixAudioTimestampGap: false,
 
     accurateSeek: false,
     seekType: 'range',  // [range, param, custom]

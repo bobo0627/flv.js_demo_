@@ -146,7 +146,10 @@ class FLVDemuxer {
         if (offset < 9) {
             return mismatch;
         }
-
+        console.log('音频');
+        console.log(data);
+        console.log(hasAudio);
+       // console.log(hasVideo);
         return {
             match: true,
             consumed: offset,
@@ -261,6 +264,7 @@ class FLVDemuxer {
         if (!this._hasAudio && this._hasVideo) {  // video only
             return this._videoInitialMetadataDispatched;
         }
+        console.log(this._audioInitialMetadataDispatched);
         return false;
     }
 
@@ -356,12 +360,15 @@ class FLVDemuxer {
         }
 
         // dispatch parsed frames to consumer (typically, the remuxer)
-        if (this._isInitialMetadataDispatched()) {
-            if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
-                this._onDataAvailable(this._audioTrack, this._videoTrack);
-            }
+        //6.8注释 纯视频  hasAudio=true  无法显示画面问题
+        // if (this._isInitialMetadataDispatched()) {
+        //     if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+        //         this._onDataAvailable(this._audioTrack, this._videoTrack);
+        //     }
+        // }
+        if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+            this._onDataAvailable(this._audioTrack, this._videoTrack);
         }
-
         return offset;  // consumed bytes, just equals latest offset index
     }
 

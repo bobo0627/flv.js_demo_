@@ -1,11 +1,11 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.flvjs = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(_dereq_,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.flvjs = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 (function (process,global){
 /*!
  * @overview es6-promise - a tiny implementation of Promises/A+.
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/stefanpenner/es6-promise/master/LICENSE
- * @version   v4.2.8+1e68dce6
+ * @version   v4.2.5+7f2b526d
  */
 
 (function (global, factory) {
@@ -236,12 +236,23 @@ var PENDING = void 0;
 var FULFILLED = 1;
 var REJECTED = 2;
 
+var TRY_CATCH_ERROR = { error: null };
+
 function selfFulfillment() {
   return new TypeError("You cannot resolve a promise with itself");
 }
 
 function cannotReturnOwn() {
   return new TypeError('A promises callback cannot return that same promise.');
+}
+
+function getThen(promise) {
+  try {
+    return promise.then;
+  } catch (error) {
+    TRY_CATCH_ERROR.error = error;
+    return TRY_CATCH_ERROR;
+  }
 }
 
 function tryThen(then$$1, value, fulfillmentHandler, rejectionHandler) {
@@ -299,7 +310,10 @@ function handleMaybeThenable(promise, maybeThenable, then$$1) {
   if (maybeThenable.constructor === promise.constructor && then$$1 === then && maybeThenable.constructor.resolve === resolve$1) {
     handleOwnThenable(promise, maybeThenable);
   } else {
-    if (then$$1 === undefined) {
+    if (then$$1 === TRY_CATCH_ERROR) {
+      reject(promise, TRY_CATCH_ERROR.error);
+      TRY_CATCH_ERROR.error = null;
+    } else if (then$$1 === undefined) {
       fulfill(promise, maybeThenable);
     } else if (isFunction(then$$1)) {
       handleForeignThenable(promise, maybeThenable, then$$1);
@@ -313,14 +327,7 @@ function resolve(promise, value) {
   if (promise === value) {
     reject(promise, selfFulfillment());
   } else if (objectOrFunction(value)) {
-    var then$$1 = void 0;
-    try {
-      then$$1 = value.then;
-    } catch (error) {
-      reject(promise, error);
-      return;
-    }
-    handleMaybeThenable(promise, value, then$$1);
+    handleMaybeThenable(promise, value, getThen(value));
   } else {
     fulfill(promise, value);
   }
@@ -399,18 +406,31 @@ function publish(promise) {
   promise._subscribers.length = 0;
 }
 
+function tryCatch(callback, detail) {
+  try {
+    return callback(detail);
+  } catch (e) {
+    TRY_CATCH_ERROR.error = e;
+    return TRY_CATCH_ERROR;
+  }
+}
+
 function invokeCallback(settled, promise, callback, detail) {
   var hasCallback = isFunction(callback),
       value = void 0,
       error = void 0,
-      succeeded = true;
+      succeeded = void 0,
+      failed = void 0;
 
   if (hasCallback) {
-    try {
-      value = callback(detail);
-    } catch (e) {
-      succeeded = false;
-      error = e;
+    value = tryCatch(callback, detail);
+
+    if (value === TRY_CATCH_ERROR) {
+      failed = true;
+      error = value.error;
+      value.error = null;
+    } else {
+      succeeded = true;
     }
 
     if (promise === value) {
@@ -419,13 +439,14 @@ function invokeCallback(settled, promise, callback, detail) {
     }
   } else {
     value = detail;
+    succeeded = true;
   }
 
   if (promise._state !== PENDING) {
     // noop
   } else if (hasCallback && succeeded) {
     resolve(promise, value);
-  } else if (succeeded === false) {
+  } else if (failed) {
     reject(promise, error);
   } else if (settled === FULFILLED) {
     fulfill(promise, value);
@@ -503,15 +524,7 @@ var Enumerator = function () {
 
 
     if (resolve$$1 === resolve$1) {
-      var _then = void 0;
-      var error = void 0;
-      var didError = false;
-      try {
-        _then = entry.then;
-      } catch (e) {
-        didError = true;
-        error = e;
-      }
+      var _then = getThen(entry);
 
       if (_then === then && entry._state !== PENDING) {
         this._settledAt(entry._state, i, entry._result);
@@ -520,11 +533,7 @@ var Enumerator = function () {
         this._result[i] = entry;
       } else if (c === Promise$1) {
         var promise = new c(noop);
-        if (didError) {
-          reject(promise, error);
-        } else {
-          handleMaybeThenable(promise, entry, _then);
-        }
+        handleMaybeThenable(promise, entry, _then);
         this._willSettleAt(promise, i);
       } else {
         this._willSettleAt(new c(function (resolve$$1) {
@@ -1775,9 +1784,9 @@ exports.createDefaultConfig = createDefaultConfig;
  */
 
 var defaultConfig = exports.defaultConfig = {
-    enableWorker: false,
+    enableWorker: true,
     enableStashBuffer: true,
-    stashInitialSize: undefined,
+    stashInitialSize: 384,
 
     isLive: false,
 
@@ -1792,7 +1801,7 @@ var defaultConfig = exports.defaultConfig = {
 
     statisticsInfoReportInterval: 600,
 
-    fixAudioTimestampGap: true,
+    fixAudioTimestampGap: false,
 
     accurateSeek: false,
     seekType: 'range', // [range, param, custom]
@@ -3002,6 +3011,7 @@ var Transmuxer = function () {
         this.TAG = 'Transmuxer';
         this._emitter = new _events2.default();
         this._config = config;
+        console.log(this._config);
         if (config.enableWorker && typeof Worker !== 'undefined') {
             try {
                 var work = _dereq_('webworkify');
@@ -4705,6 +4715,7 @@ var FLVDemuxer = function () {
                 // video only
                 return this._videoInitialMetadataDispatched;
             }
+            console.log(this._audioInitialMetadataDispatched);
             return false;
         }
 
@@ -4808,12 +4819,15 @@ var FLVDemuxer = function () {
             }
 
             // dispatch parsed frames to consumer (typically, the remuxer)
-            if (this._isInitialMetadataDispatched()) {
-                if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
-                    this._onDataAvailable(this._audioTrack, this._videoTrack);
-                }
+            //6.8注释 纯视频  hasAudio=true  无法显示画面问题
+            // if (this._isInitialMetadataDispatched()) {
+            //     if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+            //         this._onDataAvailable(this._audioTrack, this._videoTrack);
+            //     }
+            // }
+            if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
+                this._onDataAvailable(this._audioTrack, this._videoTrack);
             }
-
             return offset; // consumed bytes, just equals latest offset index
         }
     }, {
@@ -5701,7 +5715,10 @@ var FLVDemuxer = function () {
             if (offset < 9) {
                 return mismatch;
             }
-
+            console.log('音频');
+            console.log(data);
+            console.log(hasAudio);
+            // console.log(hasVideo);
             return {
                 match: true,
                 consumed: offset,
@@ -10312,8 +10329,8 @@ var MP4 = function () {
             MP4.box(MP4.types.stts, MP4.constants.STTS), // Time-To-Sample
             MP4.box(MP4.types.stsc, MP4.constants.STSC), // Sample-To-Chunk
             MP4.box(MP4.types.stsz, MP4.constants.STSZ), // Sample size
-            MP4.box(MP4.types.stco, MP4.constants.STCO) // Chunk offset
-            );
+            MP4.box(MP4.types.stco, MP4.constants.STCO // Chunk offset
+            ));
             return result;
         }
 

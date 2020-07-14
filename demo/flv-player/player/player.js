@@ -5,7 +5,7 @@ const INIT = 'init',
     DISCONNECT = 'disconnect',
     CURRENTTIME = 'currentTime',
     SHOTIMAGE = 'shotImage',
-    BSERURL = 'http://33.95.241.120:8008';
+    BSERURL = 'http://182.242.210.50:8009';
 
 const Util = {
     checkStream(stream) {
@@ -51,12 +51,13 @@ class Player{
                 cors: true,
                 withCredentials: false
             },{
-                enableWorker: true,
-                enableStashBuffer: false,
-                stashInitialSize: 480,
-                autoCleanupSourceBuffer: true,
-                autoCleanupMaxBackwardDuration: 5,
-                autoCleanupMinBackwardDuration: 3,
+                enableWorker: false,
+                //enableStashBuffer: false,
+                stashInitialSize: 384,
+                //autoCleanupSourceBuffer: true,
+                //autoCleanupMaxBackwardDuration: 5,
+                //autoCleanupMinBackwardDuration: 3,
+                fixAudioTimestampGap: true,
                 lazyLoadMaxDuration: 3 * 60,
                 seekType: 'range'
             });

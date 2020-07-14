@@ -30,6 +30,7 @@ class Transmuxer {
         this.TAG = 'Transmuxer';
         this._emitter = new EventEmitter();
         this._config = config;
+        console.log(this._config);
         if (config.enableWorker && typeof (Worker) !== 'undefined') {
             try {
                 let work = require('webworkify');
