@@ -146,10 +146,6 @@ class FLVDemuxer {
         if (offset < 9) {
             return mismatch;
         }
-        console.log('音频');
-        console.log(data);
-        console.log(hasAudio);
-       // console.log(hasVideo);
         return {
             match: true,
             consumed: offset,
@@ -264,7 +260,7 @@ class FLVDemuxer {
         if (!this._hasAudio && this._hasVideo) {  // video only
             return this._videoInitialMetadataDispatched;
         }
-        console.log(this._audioInitialMetadataDispatched);
+        //console.log(this._audioInitialMetadataDispatched);
         return false;
     }
 

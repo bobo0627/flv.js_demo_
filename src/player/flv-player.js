@@ -151,7 +151,7 @@ class FlvPlayer {
         this._msectl.on(MSEEvents.ERROR, (info) => {
             window.postMessage({
                 action: 'refresh',
-                mediaElement: mediaElement
+                mediaElement: mediaElement.id
             }, '*');
             this._emitter.emit(PlayerEvents.ERROR,
                                ErrorTypes.MEDIA_ERROR,

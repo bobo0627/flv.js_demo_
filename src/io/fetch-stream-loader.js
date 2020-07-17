@@ -49,7 +49,7 @@ class FetchStreamLoader extends BaseLoader {
         this._seekHandler = seekHandler;
         this._config = config;
         this._needStash = true;
-
+        
         this._requestAbort = false;
         this._contentLength = null;
         this._receivedLength = 0;
@@ -163,11 +163,16 @@ class FetchStreamLoader extends BaseLoader {
 
     abort() {
         this._requestAbort = true;
-
-        self.postMessage({
-            action: 'disconnect',
-            // mediaElement: this._config.mediaElement
-        });
+        //console.log(this._config);
+        let videoEleId = this._config.mediaElement.id;//九宫格demo 根据id去 刷新对应video
+        //console.log(videoEleId);
+        setTimeout (() => {
+            self.postMessage({
+                action: 'disconnect',
+                mediaElement: videoEleId,
+                types: 'stick'
+            });
+        }, 5000);     
     }
 
     _pump(reader) {  // ReadableStreamReader

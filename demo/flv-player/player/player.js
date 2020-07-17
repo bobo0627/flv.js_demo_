@@ -47,7 +47,7 @@ class Player{
                 url: this.config.stream,
                 hasVideo: true,
                 hasAudio: true,
-                isLive: true,
+                isLive: false,
                 cors: true,
                 withCredentials: false
             },{
@@ -93,6 +93,7 @@ class Player{
                 credentials: 'include'
             })
             .then(res => {
+                console.log(res)
                 if(res.ok){
                     clearInterval(interval);
                     let json = res.json();
@@ -103,6 +104,7 @@ class Player{
                 }
             })
             .catch(err => {
+                console.log(err)
                 throw new Error(err);
             });
         }, 10000);
@@ -167,7 +169,7 @@ if(searchs){
 }
 
 window.addEventListener('message', function(event){
-    console.log(event.data);
+    console.log(event);
     if(szPlayer){
         switch(event.data.action) {
             case INIT:  szPlayer.create();

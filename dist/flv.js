@@ -1799,7 +1799,7 @@ var defaultConfig = exports.defaultConfig = {
     autoCleanupMaxBackwardDuration: 3 * 60,
     autoCleanupMinBackwardDuration: 2 * 60,
 
-    statisticsInfoReportInterval: 600,
+    statisticsInfoReportInterval: 5000,
 
     fixAudioTimestampGap: false,
 
@@ -3011,7 +3011,7 @@ var Transmuxer = function () {
         this.TAG = 'Transmuxer';
         this._emitter = new _events2.default();
         this._config = config;
-        console.log(this._config);
+        //console.log(this._config);
         if (config.enableWorker && typeof Worker !== 'undefined') {
             try {
                 var work = _dereq_('webworkify');
@@ -3277,7 +3277,8 @@ var Transmuxer = function () {
                 case 'disconnect':
                     window.postMessage({
                         action: 'disconnect',
-                        mediaElement: this._config.mediaElement
+                        mediaElement: this._config.mediaElement.id,
+                        types: ''
                     }, '*');
                     break;
                 default:
@@ -3367,7 +3368,7 @@ var TransmuxingController = function () {
         this._emitter = new _events2.default();
 
         this._config = config;
-
+        console.log(this._config);
         // treat single part media as multipart media, which has only one segment
         if (!mediaDataSource.segments) {
             mediaDataSource.segments = [{
@@ -3709,11 +3710,14 @@ var TransmuxingController = function () {
     }, {
         key: '_onIOException',
         value: function _onIOException(type, info) {
-            _logger2.default.e(this.TAG, 'IOException: type = ' + type + ', code = ' + info.code + ', msg = ' + info.msg);
 
-            self.postMessage({
+            _logger2.default.e(this.TAG, 'IOException: type = ' + type + ', code = ' + info.code + ', msg = ' + info.msg);
+            var videoEleId = this._config.mediaElement.id; //九宫格demo 根据id去 刷新对应video
+            //setTimeout(() => {}, 5000);
+            self.postMessage({ //flv视频流。断流时抛出异常？？
                 action: 'disconnect',
-                mediaElement: this._config.mediaElement
+                mediaElement: videoEleId,
+                typeName: info.code == -1 ? 'off_line' : 'cutoff'
             });
 
             this._emitter.emit(_transmuxingEvents2.default.IO_ERROR, type, info);
@@ -4715,7 +4719,7 @@ var FLVDemuxer = function () {
                 // video only
                 return this._videoInitialMetadataDispatched;
             }
-            console.log(this._audioInitialMetadataDispatched);
+            //console.log(this._audioInitialMetadataDispatched);
             return false;
         }
 
@@ -5715,10 +5719,6 @@ var FLVDemuxer = function () {
             if (offset < 9) {
                 return mismatch;
             }
-            console.log('音频');
-            console.log(data);
-            console.log(hasAudio);
-            // console.log(hasVideo);
             return {
                 match: true,
                 consumed: offset,
@@ -6384,11 +6384,16 @@ var FetchStreamLoader = function (_BaseLoader) {
         key: 'abort',
         value: function abort() {
             this._requestAbort = true;
-
-            self.postMessage({
-                action: 'disconnect'
-                // mediaElement: this._config.mediaElement
-            });
+            //console.log(this._config);
+            var videoEleId = this._config.mediaElement.id; //九宫格demo 根据id去 刷新对应video
+            //console.log(videoEleId);
+            setTimeout(function () {
+                self.postMessage({
+                    action: 'disconnect',
+                    mediaElement: videoEleId,
+                    types: 'stick'
+                });
+            }, 5000);
         }
     }, {
         key: '_pump',
@@ -9080,7 +9085,7 @@ var FlvPlayer = function () {
             this._msectl.on(_mseEvents2.default.ERROR, function (info) {
                 window.postMessage({
                     action: 'refresh',
-                    mediaElement: mediaElement
+                    mediaElement: mediaElement.id
                 }, '*');
                 _this2._emitter.emit(_playerEvents2.default.ERROR, _playerErrors.ErrorTypes.MEDIA_ERROR, _playerErrors.ErrorDetails.MEDIA_MSE_ERROR, info);
             });

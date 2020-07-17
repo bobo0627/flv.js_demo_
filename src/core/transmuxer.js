@@ -30,7 +30,7 @@ class Transmuxer {
         this.TAG = 'Transmuxer';
         this._emitter = new EventEmitter();
         this._config = config;
-        console.log(this._config);
+        //console.log(this._config);
         if (config.enableWorker && typeof (Worker) !== 'undefined') {
             try {
                 let work = require('webworkify');
@@ -251,7 +251,8 @@ class Transmuxer {
             case 'disconnect':
                 window.postMessage({
                     action: 'disconnect',
-                    mediaElement: this._config.mediaElement
+                    mediaElement: this._config.mediaElement.id,
+                    types: ''
                 }, '*');
                 break;
             default:
