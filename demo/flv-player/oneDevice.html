@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>html5响应式九宫格</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="format-detection" content="telephone=no" />
+<meta charset="utf-8" />
+<style type="text/css">
+    html, body { color:#222; font-family:Microsoft YaHei, Helvitica, Verdana, Tohoma, Arial, san-serif; margin:0; padding: 0; text-decoration: none; }
+    img { border:0; }
+    ul { list-style: none outside none; margin:0; padding: 0; }
+    body {
+        background-color:#eee;
+    }
+    body .mainmenu:after { clear: both; content: " "; display: block; }
+
+    body .mainmenu li{
+        float:left;
+        margin-left: 2.5%;
+        margin-top: 2.5%;
+        width: 60%; 
+        border-radius:3px;
+        overflow:hidden;
+    }
+
+    body .mainmenu li a{ display:block;  color:#FFF;   text-align:center }
+    body .mainmenu li a b{
+        display:block; height:80px;
+    }
+    body .mainmenu li a img{
+        margin: 15px auto 15px;
+        width: 50px;
+        height: 50px;
+    }
+
+    body .mainmenu li a span{ display:block; height:30px; line-height:30px;background-color:#FFF; color: #999; font-size:14px; }
+
+    body .mainmenu li:nth-child(8n+1) {background-color:#36A1DB}
+    body .mainmenu li:nth-child(8n+2) {background-color:#678ce1}
+    body .mainmenu li:nth-child(8n+3) {background-color:#8c67df}
+    body .mainmenu li:nth-child(8n+4) {background-color:#84d018}
+    body .mainmenu li:nth-child(8n+5) {background-color:#14c760}
+    body .mainmenu li:nth-child(8n+6) {background-color:#f3b613}
+    body .mainmenu li:nth-child(8n+7) {background-color:#ff8a4a}
+    body .mainmenu li:nth-child(8n+8) {background-color:#fc5366}
+    .centeredVideo{
+        background-color: #000;
+        border-radius: 3px;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+</head>
+
+<body>
+    <ul class="mainmenu">
+        <li><input id="sURL1" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(1)">Load</button><b><video width="320" height="240" name="videoElement-1" id="videoElement-1" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(1)">Destroy</button></li>
+        <!-- <li><input id="sURL2" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(2)">Load</button><b><video width="320" height="240" name="videoElement-2" id="videoElement-2" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(2)">Destroy</button></li>
+        <li><input id="sURL3" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(3)">Load</button><b><video width="320" height="240" name="videoElement-3" id="videoElement-3" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(3)">Destroy</button></li>
+        <li><input id="sURL4" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(4)">Load</button><b><video width="320" height="240" name="videoElement-4" id="videoElement-4" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(4)">Destroy</button></li>
+        <li><input id="sURL5" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(5)">Load</button><b><video width="320" height="240" name="videoElement-5" id="videoElement-5" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(5)">Destroy</button></li>
+        <li><input id="sURL6" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(6)">Load</button><b><video width="320" height="240" name="videoElement-6" id="videoElement-6" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(6)">Destroy</button></li>
+        <li><input id="sURL7" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(7)">Load</button><b><video width="320" height="240" name="videoElement-7" id="videoElement-7" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(7)">Destroy</button></li>
+        <li><input id="sURL8" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(8)">Load</button><b><video width="320" height="240" name="videoElement-8" id="videoElement-8" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(8)">Destroy</button></li>
+        <li><input id="sURL9" type="text" value="https://192.168.2.7:443/rtmplive/home.flv" /><button onclick="flv_load(9)">Load</button><b><video width="320" height="240" name="videoElement-9" id="videoElement-9" class="centeredVideo" autoplay>Your browser is too old which doesn't support HTML5 video.</video></b><button onclick="flv_destroy(9)">Destroy</button></li>          -->
+    </ul>
+	<script src="../../dist//flv.min.js"></script>
+    
+    <script>
+        var players = {};
+		var playerArr = [{name:'videoElement-1',count:0},{name:'videoElement-2',count:0},{name:'videoElement-3',count:0},{name:'videoElement-4',count:0},{name:'videoElement-5',count:0},{name:'videoElement-6',count:0},{name:'videoElement-7',count:0},{name:'videoElement-8',count:0},{name:'videoElement-9',count:0}]
+		var playerVideo = document.querySelectorAll('video');
+		console.log(playerVideo)
+		Array.prototype.slice.apply(playerVideo).forEach(function(item){
+		 item.oncontextmenu = function () {
+              window.event.returnValue=false;
+              return false;
+          }
+		})
+         
+        function flv_load(select) {
+			flv_load_mds({
+					type: 'flv',
+					url: document.getElementById('sURL'+select).value,
+                    hasVideo: true,
+                    hasAudio: true,
+                    isLive: false,
+                    cors: true,
+                    withCredentials: false
+                }, select);
+        }
+        function flv_load_mds(mediaDataSource, select) {
+			if(players[select]){
+				flv_destroy(select);
+            }
+			var element = document.getElementsByName('videoElement-'+select)[0];
+			players[select] = flvjs.createPlayer(mediaDataSource, {
+                        //enableWorker: true,
+                        isLive: true,
+                        enableStashBuffer: false,
+                        stashInitialSize: 512*1024,
+                        
+						//autoCleanupSourceBuffer: true,
+						//autoCleanupMaxBackwardDuration: 5,
+						//autoCleanupMinBackwardDuration: 3,
+						//lazyLoadMaxDuration: 1 * 60,
+						//seekType: 'range',
+						fixAudioTimestampGap: true,
+						autoCleanupMaxBackwardDuration: 60,
+						autoCleanupMinBackwardDuration: 30,
+						statisticsInfoReportInterval: 2000,
+						enableDurationMonitor: true,
+						enableVideoFrozenMonitor: true,
+						enableConstVideoViewSize: true,
+						
+						enableWorker: false,
+						//lazyLoadMaxDuration: 1 * 60,
+						seekType: 'range',
+					});
+			players[select].attachMediaElement(element);
+			players[select].load();
+			players[select].on(flvjs.Events.VIDEO_FROZEN, (item) => {
+                console.log('--== video frozen ==--',item);
+                //flv_load(select);
+            });
+			players[select].on(flvjs.Events.ERROR, (errType, errDetail) => {
+				console.log('视频流断开/或无法播放');
+			});
+        }
+        function flv_destroy(select) {
+			players[select].unload();
+			players[select].detachMediaElement();
+			players[select].destroy();
+			players[select] = null;		
+        }
+        function flv_refresh(ele) {
+			//console.log(ele)	
+            var num = parseInt(ele.split('-')[1]);
+            //console.log(num);
+			//console.log(playerArr[num-1].count,playerArr)
+			playerArr[num-1].count >5  ? playerArr[num-1].count = 0 : flv_load(num);
+            //flv_load(num);
+        }
+		//players[2].on(flvjs.Events.VIDEO_FROZEN, () => {
+                //console.log('--== video frozen ==--');
+                //flv_load(2);
+            //});
+        window.addEventListener('message', function(event){
+            console.log(event.data);
+			//event,data.typeName    有 ''(空)/stick/off_line/cutoff 四种状态
+			//off_line 表示 设备离线或设备断流后 流的端口号改变
+			//cutoff 断流
+			//stick 流不稳定 卡死 情况， 如有此异常 会每间隔5s抛出、进行refresh刷新，直至流稳定不会抛出此异常
+			//''(空)  什么也不表示
+			if(event.data.typeName == 'off_line'){
+				var num = parseInt(event.data.mediaElement.split('-')[1]);
+				playerArr[num-1].count+=1
+				//console.log(num,playerArr[num-1],playerArr[num-1].count)
+			}
+			if(event.data.typeName != 'stick' || event.data.typeName != 'off_line'){
+            //switch(event.data.action) {
+                //case 'disconnect': flv_refresh(event.data.mediaElement);
+                  //  break;
+                //case 'refresh': flv_refresh(event.data.mediaElement);
+                  //  break;
+                //default: break;
+            //}
+			}
+        });
+		 window.addEventListener('DOMContentLoaded', function(event){
+			console.log('DOMContentLoaded')
+		 })
+    </script>
+</body>
+</html>

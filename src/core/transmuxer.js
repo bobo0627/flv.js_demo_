@@ -252,7 +252,7 @@ class Transmuxer {
                 window.postMessage({
                     action: 'disconnect',
                     mediaElement: this._config.mediaElement.id,
-                    types: ''
+                    typeName: ''
                 }, '*');
                 break;
             default:

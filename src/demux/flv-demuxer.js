@@ -524,13 +524,12 @@ class FLVDemuxer {
             meta.audioSampleRate = soundRate;
             meta.channelCount = (soundType === 0 ? 1 : 2);
         }
-
         if (soundFormat === 10) {  // AAC
             let aacData = this._parseAACAudioData(arrayBuffer, dataOffset + 1, dataSize - 1);
             if (aacData == undefined) {
                 return;
             }
-
+            //console.log('aacData', aacData);
             if (aacData.packetType === 0) {  // AAC sequence header (AudioSpecificConfig)
                 if (meta.config) {
                     Log.w(this.TAG, 'Found another AudioSpecificConfig!');
@@ -716,7 +715,6 @@ class FLVDemuxer {
             audioObjectType = 5;
             extensionSamplingIndex = samplingIndex;
             config = new Array(4);
-
             if (samplingIndex >= 6) {
                 extensionSamplingIndex = samplingIndex - 3;
             } else if (channelConfig === 1) {  // Mono channel

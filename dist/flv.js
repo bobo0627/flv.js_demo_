@@ -1813,7 +1813,24 @@ var defaultConfig = exports.defaultConfig = {
     // referrerPolicy: leave as unspecified
 
     headers: undefined,
-    customLoader: undefined
+    customLoader: undefined,
+
+    videoStateMonitorInterval: 1000,
+    enableDurationMonitor: false,
+    maxDurationGap: 1.5, // second
+    decreaseDurationStep: 0.4, // second
+    enableVideoFrozenMonitor: false,
+    frozenTimesThreshold: 5,
+
+    enableConstVideoViewSize: false,
+    constVideoViewWidth: 1920,
+    constVideoViewHeight: 1080,
+
+    latencyDetectInterval: 15000,
+    latencyDetectThreshold: 3,
+    latencyDetectIncreaseStep: 1,
+    latencyDetectAdjustStep: 0.1,
+    latencyDetectAdjustFactor: 4
 };
 
 function createDefaultConfig() {
@@ -2448,6 +2465,7 @@ var MSEController = function () {
     }, {
         key: 'attachMediaElement',
         value: function attachMediaElement(mediaElement) {
+            //console.log('mediaElement', mediaElement);
             if (this._mediaSource) {
                 throw new _exception.IllegalStateException('MediaSource has been attached to an HTMLMediaElement!');
             }
@@ -2681,12 +2699,24 @@ var MSEController = function () {
             return this._idrList.getLastSyncPointBeforeDts(dts);
         }
     }, {
+        key: 'checkSourceBufferNull',
+        value: function checkSourceBufferNull() {
+            //7.29新增
+            var isNull = true;
+            for (var type in this._sourceBuffers) {
+                if (this._sourceBuffers[type] != null) {
+                    isNull = false;
+                    break;
+                }
+            }
+            return isNull;
+        }
+    }, {
         key: '_needCleanupSourceBuffer',
         value: function _needCleanupSourceBuffer() {
             if (!this._config.autoCleanupSourceBuffer) {
                 return false;
             }
-
             var currentTime = this._mediaElement.currentTime;
 
             for (var type in this._sourceBuffers) {
@@ -2695,6 +2725,7 @@ var MSEController = function () {
                     var buffered = sb.buffered;
                     if (buffered.length >= 1) {
                         if (currentTime - buffered.start(0) >= this._config.autoCleanupMaxBackwardDuration) {
+                            //console.log('_needCleanupSourceBuffer', currentTime, buffered.start(0), this._config.autoCleanupMaxBackwardDuration);
                             return true;
                         }
                     }
@@ -3278,7 +3309,7 @@ var Transmuxer = function () {
                     window.postMessage({
                         action: 'disconnect',
                         mediaElement: this._config.mediaElement.id,
-                        types: ''
+                        typeName: ''
                     }, '*');
                     break;
                 default:
@@ -3368,7 +3399,7 @@ var TransmuxingController = function () {
         this._emitter = new _events2.default();
 
         this._config = config;
-        console.log(this._config);
+        //console.log(this._config);
         // treat single part media as multipart media, which has only one segment
         if (!mediaDataSource.segments) {
             mediaDataSource.segments = [{
@@ -3710,16 +3741,7 @@ var TransmuxingController = function () {
     }, {
         key: '_onIOException',
         value: function _onIOException(type, info) {
-
             _logger2.default.e(this.TAG, 'IOException: type = ' + type + ', code = ' + info.code + ', msg = ' + info.msg);
-            var videoEleId = this._config.mediaElement.id; //九宫格demo 根据id去 刷新对应video
-            //setTimeout(() => {}, 5000);
-            self.postMessage({ //flv视频流。断流时抛出异常？？
-                action: 'disconnect',
-                mediaElement: videoEleId,
-                typeName: info.code == -1 ? 'off_line' : 'cutoff'
-            });
-
             this._emitter.emit(_transmuxingEvents2.default.IO_ERROR, type, info);
             this._disableStatisticsReporter();
         }
@@ -5003,14 +5025,13 @@ var FLVDemuxer = function () {
                 meta.audioSampleRate = soundRate;
                 meta.channelCount = soundType === 0 ? 1 : 2;
             }
-
             if (soundFormat === 10) {
                 // AAC
                 var aacData = this._parseAACAudioData(arrayBuffer, dataOffset + 1, dataSize - 1);
                 if (aacData == undefined) {
                     return;
                 }
-
+                //console.log('aacData', aacData);
                 if (aacData.packetType === 0) {
                     // AAC sequence header (AudioSpecificConfig)
                     if (meta.config) {
@@ -5203,7 +5224,6 @@ var FLVDemuxer = function () {
                 audioObjectType = 5;
                 extensionSamplingIndex = samplingIndex;
                 config = new Array(4);
-
                 if (samplingIndex >= 6) {
                     extensionSamplingIndex = samplingIndex - 3;
                 } else if (channelConfig === 1) {
@@ -6384,16 +6404,6 @@ var FetchStreamLoader = function (_BaseLoader) {
         key: 'abort',
         value: function abort() {
             this._requestAbort = true;
-            //console.log(this._config);
-            var videoEleId = this._config.mediaElement.id; //九宫格demo 根据id去 刷新对应video
-            //console.log(videoEleId);
-            setTimeout(function () {
-                self.postMessage({
-                    action: 'disconnect',
-                    mediaElement: videoEleId,
-                    types: 'stick'
-                });
-            }, 5000);
         }
     }, {
         key: '_pump',
@@ -9012,6 +9022,33 @@ var FlvPlayer = function () {
         if (this._alwaysSeekKeyframe) {
             this._config.accurateSeek = false;
         }
+
+        this._videoStateMonitorInterval = this._config.videoStateMonitorInterval;
+        // for duration monitor
+        this._enableDurationMonitor = this._config.enableDurationMonitor;
+        this._maxDurationGap = this._config.maxDurationGap;
+        this._decreaseDurationStep = this._config.decreaseDurationStep;
+        this._durationMonitor = null;
+        // for video frozen monitor
+        this._enableVideoFrozenMonitor = this._config.enableVideoFrozenMonitor;
+        this._frozenTimesThreshold = this._config.frozenTimesThreshold;
+        this._forzenTimes = 0;
+        this._lastDecodedFrames = 0;
+
+        //每 M 秒计算一下延迟追赶发生的次数
+        // >= N次，认为调整次数太频繁，_maxDurationGap一次性增加 K 秒
+        // 0~N次，发生追赶，但不算频繁，_maxDurationGap少量增加 P 秒
+        // == 0次，认为拉流数据较为平滑，未发生追赶，_maxDurationGap下调 P 秒
+        // M,N,K,P为可配参数，K建议大一点，P建议小一点
+        this._latencyDetectInterval = this._config.latencyDetectInterval; //M, 毫秒
+        this._latencyDetectThreshold = this._config.latencyDetectThreshold; //N
+        this._latencyDetectIncreaseStep = this._config.latencyDetectIncreaseStep; //K
+        this._latencyDetectAdjustStep = this._config.latencyDetectAdjustStep; //P 
+        this._latencyDetectAdjustFactor = this._config.latencyDetectAdjustFactor; //增加 P 秒的时间间隔因子，即多少个_latencyDetectInterval才触发一次上调
+
+        this._latencyDetectTimer = null;
+        this._latencyAdjustCount = 0;
+        this._latencyAdjustFactor = 0;
     }
 
     _createClass(FlvPlayer, [{
@@ -9030,8 +9067,10 @@ var FlvPlayer = function () {
             this.e = null;
             this._mediaDataSource = null;
 
-            this._emitter.removeAllListeners();
-            this._emitter = null;
+            if (this._emitter) {
+                this._emitter.removeAllListeners();
+                this._emitter = null;
+            }
         }
     }, {
         key: 'on',
@@ -9065,6 +9104,7 @@ var FlvPlayer = function () {
 
             this._mediaElement = mediaElement;
             this._config.mediaElement = mediaElement;
+            //see more events of video element from https://developer.mozilla.org/en-US/docs/Web/HTML/Element/video
             mediaElement.addEventListener('loadedmetadata', this.e.onvLoadedMetadata);
             mediaElement.addEventListener('seeking', this.e.onvSeeking);
             mediaElement.addEventListener('canplay', this.e.onvCanPlay);
@@ -9082,11 +9122,14 @@ var FlvPlayer = function () {
                     _this2.load();
                 }
             });
+            this._msectl.on(_mseEvents2.default.SOURCE_END, function () {
+                _this2._emitter.emit(_playerEvents2.default.MEDIA_SOURCE_ENDED);
+            });
+            this._msectl.on(_mseEvents2.default.SOURCE_CLOSE, function () {
+                _this2._mseSourceOpened = false;
+                _this2._emitter.emit(_playerEvents2.default.MEDIA_SOURCE_CLOSE);
+            });
             this._msectl.on(_mseEvents2.default.ERROR, function (info) {
-                window.postMessage({
-                    action: 'refresh',
-                    mediaElement: mediaElement.id
-                }, '*');
                 _this2._emitter.emit(_playerEvents2.default.ERROR, _playerErrors.ErrorTypes.MEDIA_ERROR, _playerErrors.ErrorDetails.MEDIA_MSE_ERROR, info);
             });
 
@@ -9145,6 +9188,14 @@ var FlvPlayer = function () {
                 this._mediaElement.currentTime = 0;
             }
 
+            if (this._enableDurationMonitor && this._durationMonitor == null) {
+                this._durationMonitor = self.setInterval(this._doDurationMonitor.bind(this), this._videoStateMonitorInterval);
+                this._forzenTimes = 0;
+                this._lastDecodedFrames = 0;
+
+                this._latencyDetectTimer = self.setInterval(this._adjustDurationGap.bind(this), this._latencyDetectInterval);
+            }
+
             this._transmuxer = new _transmuxer2.default(this._mediaDataSource, this._config);
 
             this._transmuxer.on(_transmuxingEvents2.default.INIT_SEGMENT, function (type, is) {
@@ -9197,6 +9248,9 @@ var FlvPlayer = function () {
                     _this3._mediaElement.currentTime = milliseconds / 1000;
                 }
             });
+            this._transmuxer.on(_transmuxingEvents2.default.VIDEO_RESOLUTION_CHANGED, function (video_info) {
+                _this3._emitter.emit(_playerEvents2.default.VIDEO_RESOLUTION_CHANGED, video_info);
+            });
 
             this._transmuxer.open();
         }
@@ -9214,6 +9268,20 @@ var FlvPlayer = function () {
                 this._transmuxer.destroy();
                 this._transmuxer = null;
             }
+
+            if (this._durationMonitor) {
+                self.clearInterval(this._durationMonitor);
+                this._durationMonitor = null;
+            }
+
+            if (this._latencyDetectTimer) {
+                self.clearInterval(this._latencyDetectTimer);
+                this._latencyDetectTimer = null;
+                this._latencyAdjustCount = 0;
+            }
+
+            this._forzenTimes = 0;
+            this._lastDecodedFrames = 0;
         }
     }, {
         key: 'play',
@@ -9257,6 +9325,114 @@ var FlvPlayer = function () {
             return statInfo;
         }
     }, {
+        key: 'enableVideoStateMonitor',
+        value: function enableVideoStateMonitor(enabled) {
+            this._enableDurationMonitor = enabled;
+            this._enableVideoFrozenMonitor = enabled;
+        }
+    }, {
+        key: '_increaseLatencyAdjust',
+        value: function _increaseLatencyAdjust(second) {
+            this._maxDurationGap += second;
+            _logger2.default.d(this.TAG, '+' + this._maxDurationGap);
+        }
+    }, {
+        key: '_decreaseLatencyAdjust',
+        value: function _decreaseLatencyAdjust(second) {
+            this._maxDurationGap -= second;
+            if (this._maxDurationGap < this._config.maxDurationGap) {
+                this._maxDurationGap = this._config.maxDurationGap;
+            }
+            _logger2.default.d(this.TAG, '-' + this._maxDurationGap);
+        }
+    }, {
+        key: '_adjustDurationGap',
+        value: function _adjustDurationGap() {
+            if (this._latencyAdjustCount >= this._latencyDetectThreshold) {
+                this._increaseLatencyAdjust(this._latencyDetectIncreaseStep);
+            } else if (this._latencyAdjustCount == 0) {
+                ++this._latencyAdjustFactor;
+                if (this._latencyAdjustFactor >= this._latencyDetectAdjustFactor) {
+                    this._latencyAdjustFactor = 0;
+                    this._decreaseLatencyAdjust(this._latencyDetectAdjustStep);
+                }
+            }
+            this._latencyAdjustCount = 0;
+        }
+    }, {
+        key: '_doDurationMonitor',
+        value: function _doDurationMonitor() {
+            //console.log('_doDurationMonitor');
+            // Log.d(this.TAG, '_doDurationMonitor, decoded_frames:' + decoded_frames);
+            if (!this._enableDurationMonitor || !this._mseSourceOpened) {
+                return;
+            }
+
+            if (this._msectl && this._msectl.checkSourceBufferNull()) {
+                return;
+            }
+
+            var buffered = this._mediaElement.buffered;
+            var currentTime = this._mediaElement.currentTime;
+            var isPaused = this._mediaElement.paused;
+
+            if (buffered == null || buffered.length == 0) {
+                return;
+            }
+
+            var buffer_end = buffered.end(0);
+            var current_play_delta = buffer_end - currentTime;
+            // check duration
+            if (!isPaused && current_play_delta > this._maxDurationGap) {
+                //当前播放点与缓冲区末尾相差超过阈值，追赶
+                var newGap = buffer_end - this._decreaseDurationStep;
+                _logger2.default.w(this.TAG, 'large duration {' + current_play_delta + '}, reduce ' + this._decreaseDurationStep + ' and set to ' + newGap);
+                this._mediaElement.currentTime = newGap;
+                this._requestSetTime = true;
+
+                ++this._latencyAdjustCount;
+                this._increaseLatencyAdjust(this._latencyDetectAdjustStep); //立刻上调一点
+            }
+
+            // check video frozen or not
+            if (this._enableVideoFrozenMonitor) {
+                // get current decoded frames count
+                var decoded_frames = 0;
+                if (this._mediaElement.getVideoPlaybackQuality) {
+                    var quality = this._mediaElement.getVideoPlaybackQuality();
+                    decoded_frames = quality.totalVideoFrames;
+                } else if (this._mediaElement.webkitDecodedFrameCount != undefined) {
+                    decoded_frames = this._mediaElement.webkitDecodedFrameCount;
+                } else {
+                    // could not get decoded frames count
+                    return;
+                }
+
+                if (this._lastDecodedFrames != 0) {
+                    //check whether video frozen or not
+                    if (this._lastDecodedFrames == decoded_frames) {
+                        this._forzenTimes++;
+                        // Log.w(this.TAG, '--== Video decoded frames stop increase, check count:' + this._forzenTimes);
+                    } else {
+                        this._forzenTimes = 0;
+                    }
+                }
+                // Log.d(this.TAG, '--== decoded frame {last:' + this._lastDecodedFrames + ', cur:' + decoded_frames + '}');
+                this._lastDecodedFrames = decoded_frames;
+                //this._frozenTimesThreshold
+                //console.log('____', this._forzenTimes);
+                if (this._forzenTimes >= this._frozenTimesThreshold) {
+                    // equals to threshold, emit VIDEO_FROZEN event
+                    //console.log('3');
+                    _logger2.default.w(this.TAG, 'Report video frozen event');
+                    //let str = 'test';
+                    this._emitter.emit(_playerEvents2.default.VIDEO_FROZEN, this._config.mediaElement.id);
+                    //this._emitter.emit('video_decoded_frame_frozen', str);
+                    this._forzenTimes = 0;
+                }
+            }
+        }
+    }, {
         key: '_onmseUpdateEnd',
         value: function _onmseUpdateEnd() {
             if (!this._config.lazyLoad || this._config.isLive) {
@@ -9290,6 +9466,7 @@ var FlvPlayer = function () {
             if (this._progressChecker == null) {
                 this._suspendTransmuxer();
             }
+            this._emitter.emit(_playerEvents2.default.MS_BUFFER_FULL);
         }
     }, {
         key: '_suspendTransmuxer',
@@ -9931,7 +10108,7 @@ var ErrorDetails = exports.ErrorDetails = {
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 /*
  * Copyright (C) 2016 Bilibili. All Rights Reserved.
@@ -9952,13 +10129,19 @@ Object.defineProperty(exports, "__esModule", {
  */
 
 var PlayerEvents = {
-  ERROR: 'error',
-  LOADING_COMPLETE: 'loading_complete',
-  RECOVERED_EARLY_EOF: 'recovered_early_eof',
-  MEDIA_INFO: 'media_info',
-  METADATA_ARRIVED: 'metadata_arrived',
-  SCRIPTDATA_ARRIVED: 'scriptdata_arrived',
-  STATISTICS_INFO: 'statistics_info'
+    ERROR: 'error',
+    LOADING_COMPLETE: 'loading_complete',
+    RECOVERED_EARLY_EOF: 'recovered_early_eof',
+    MEDIA_INFO: 'media_info',
+    METADATA_ARRIVED: 'metadata_arrived',
+    SCRIPTDATA_ARRIVED: 'scriptdata_arrived',
+    STATISTICS_INFO: 'statistics_info',
+
+    VIDEO_RESOLUTION_CHANGED: 'video_resolution_changed',
+    MEDIA_SOURCE_ENDED: 'media_source_ended',
+    MEDIA_SOURCE_CLOSE: 'media_source_close',
+    VIDEO_FROZEN: 'video_decoded_frame_frozen',
+    MS_BUFFER_FULL: 'media_source_buffer_full'
 };
 
 exports.default = PlayerEvents;
@@ -10650,6 +10833,8 @@ var MP4Remuxer = function () {
         this._mp3UseMpegAudio = !_browser2.default.firefox;
 
         this._fillAudioTimestampGap = this._config.fixAudioTimestampGap;
+        //console.log('浏览器信息', Browser);
+        //console.log('谷歌：', this._forceFirstIDR, 'IE/Edge：', this._fillSilentAfterSeek, '火狐：', this._mp3UseMpegAudio);
     }
 
     _createClass(MP4Remuxer, [{
@@ -10671,6 +10856,7 @@ var MP4Remuxer = function () {
         value: function bindDataSource(producer) {
             producer.onDataAvailable = this.remux.bind(this);
             producer.onTrackMetadata = this._onTrackMetadataReceived.bind(this);
+            //console.log('producer', producer);
             return this;
         }
 
@@ -10804,6 +10990,7 @@ var MP4Remuxer = function () {
     }, {
         key: '_remuxAudio',
         value: function _remuxAudio(audioTrack, force) {
+            //console.log('audioTrack', audioTrack);
             if (this._audioMeta == null) {
                 return;
             }

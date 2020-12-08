@@ -162,17 +162,7 @@ class FetchStreamLoader extends BaseLoader {
     }
 
     abort() {
-        this._requestAbort = true;
-        //console.log(this._config);
-        let videoEleId = this._config.mediaElement.id;//九宫格demo 根据id去 刷新对应video
-        //console.log(videoEleId);
-        setTimeout (() => {
-            self.postMessage({
-                action: 'disconnect',
-                mediaElement: videoEleId,
-                types: 'stick'
-            });
-        }, 5000);     
+        this._requestAbort = true; 
     }
 
     _pump(reader) {  // ReadableStreamReader

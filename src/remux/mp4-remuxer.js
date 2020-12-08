@@ -65,6 +65,8 @@ class MP4Remuxer {
         this._mp3UseMpegAudio = !Browser.firefox;
 
         this._fillAudioTimestampGap = this._config.fixAudioTimestampGap;
+        //console.log('浏览器信息', Browser);
+        //console.log('谷歌：', this._forceFirstIDR, 'IE/Edge：', this._fillSilentAfterSeek, '火狐：', this._mp3UseMpegAudio);
     }
 
     destroy() {
@@ -83,6 +85,7 @@ class MP4Remuxer {
     bindDataSource(producer) {
         producer.onDataAvailable = this.remux.bind(this);
         producer.onTrackMetadata = this._onTrackMetadataReceived.bind(this);
+        //console.log('producer', producer);
         return this;
     }
 
@@ -231,6 +234,7 @@ class MP4Remuxer {
     }
 
     _remuxAudio(audioTrack, force) {
+        //console.log('audioTrack', audioTrack);
         if (this._audioMeta == null) {
             return;
         }

@@ -97,6 +97,7 @@ class MSEController {
     }
 
     attachMediaElement(mediaElement) {
+        //console.log('mediaElement', mediaElement);
         if (this._mediaSource) {
             throw new IllegalStateException('MediaSource has been attached to an HTMLMediaElement!');
         }
@@ -321,12 +322,20 @@ class MSEController {
     getNearestKeyframe(dts) {
         return this._idrList.getLastSyncPointBeforeDts(dts);
     }
-
+    checkSourceBufferNull() {//7.29新增
+        let isNull = true;
+        for (let type in this._sourceBuffers) {
+            if (this._sourceBuffers[type] != null) {
+                isNull = false;
+                break;
+            }
+        }
+        return isNull;
+    }
     _needCleanupSourceBuffer() {
         if (!this._config.autoCleanupSourceBuffer) {
             return false;
         }
-
         let currentTime = this._mediaElement.currentTime;
 
         for (let type in this._sourceBuffers) {
@@ -335,6 +344,7 @@ class MSEController {
                 let buffered = sb.buffered;
                 if (buffered.length >= 1) {
                     if (currentTime - buffered.start(0) >= this._config.autoCleanupMaxBackwardDuration) {
+                        //console.log('_needCleanupSourceBuffer', currentTime, buffered.start(0), this._config.autoCleanupMaxBackwardDuration);
                         return true;
                     }
                 }

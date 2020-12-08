@@ -35,7 +35,7 @@ class TransmuxingController {
         this._emitter = new EventEmitter();
 
         this._config = config;
-        console.log(this._config);
+        //console.log(this._config);
         // treat single part media as multipart media, which has only one segment
         if (!mediaDataSource.segments) {
             mediaDataSource.segments = [{
@@ -352,17 +352,8 @@ class TransmuxingController {
         this._emitter.emit(TransmuxingEvents.RECOVERED_EARLY_EOF);
     }
 
-    _onIOException(type, info) {
-        
+    _onIOException(type, info) {   
         Log.e(this.TAG, `IOException: type = ${type}, code = ${info.code}, msg = ${info.msg}`);
-        let videoEleId = this._config.mediaElement.id;//九宫格demo 根据id去 刷新对应video
-        //setTimeout(() => {}, 5000);
-        self.postMessage({//flv视频流。断流时抛出异常？？
-            action: 'disconnect',
-            mediaElement: videoEleId,
-            typeName: info.code == -1 ? 'off_line' : 'cutoff',
-        });
-        
         this._emitter.emit(TransmuxingEvents.IO_ERROR, type, info);
         this._disableStatisticsReporter();
     }
